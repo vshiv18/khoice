@@ -1,0 +1,270 @@
+# Name: Snakefile
+# Description: Main workflow for project ...
+# Date: 1/8/22
+
+configfile: "config/config.yaml"
+
+import glob
+import os
+
+num_datasets = config["NUM_DATASETS"]
+base_dir = config["DATA_ROOT"]
+k_values = ["7", "17", "31"]
+
+###############################################################################
+# IMPORTANT: Sets the working directory based on configuration parameter, and 
+#            it can be set on command-line using --config DATA_ROOT=""
+###############################################################################
+workdir: config["DATA_ROOT"]
+        
+##########################################################
+# Writes the input files for KMC complex operations ...
+#
+# NOTE: the complex operations requires an input file,
+#       and this code generates those files, and saves
+#       them in the the complex_ops folder.
+##########################################################
+
+# Make tmp directory for kmc
+if not os.path.isdir("tmp"):
+    os.mkdir("tmp")
+
+# Initialize complex_ops directory to start writing files
+if not os.path.isdir("complex_ops"):
+    os.mkdir("complex_ops")
+    os.mkdir("complex_ops/within_groups")
+
+# This loop builds the complex_ops files for within groups ...
+for k in k_values:
+    if not os.path.isdir(f"complex_ops/within_groups/k_{k}"):
+        os.mkdir(f"complex_ops/within_groups/k_{k}")
+
+    for num in range(1, num_datasets+1):
+        kmc_input_files = []
+
+        for data_file in os.listdir(f"data/dataset_{num}"):
+            if data_file.endswith(".fna.gz"):
+                base_name = data_file.split(".fna.gz")[0]
+                kmc_input_files.append(f"step_2/k_{k}/dataset_{num}/{base_name}.transformed")
+
+        if not os.path.isdir(f"complex_ops/within_groups/k_{k}/dataset_{num}/"):
+            os.mkdir(f"complex_ops/within_groups/k_{k}/dataset_{num}")
+
+        with open(f"complex_ops/within_groups/k_{k}/dataset_{num}/within_dataset_{num}.txt", "w") as fd:
+            fd.write("INPUT:\n")
+            result_str = "("
+            for i, path in enumerate(kmc_input_files):
+                fd.write(f"set{i+1} = {path}\n")
+                result_str += "set{} + ".format(i+1)
+            result_str = result_str[:-2] + ")"
+            fd.write("OUTPUT:\n")
+            fd.write(f"step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
+
+if not os.path.isdir("complex_ops/across_groups"):
+    os.mkdir("complex_ops/across_groups")
+
+# This loop builds the complex_ops across groups ...
+for k in k_values:
+    if not os.path.isdir(f"complex_ops/across_groups/k_{k}"):
+        os.mkdir(f"complex_ops/across_groups/k_{k}")
+    
+    kmc_input_files = []
+    for i in range(1, num_datasets+1):
+        kmc_input_files.append(f"step_6/k_{k}/dataset_{i}/dataset_{i}.transformed.combined.transformed")
+    
+    with open(f"complex_ops/across_groups/k_{k}/across_all_datasets.txt", "w") as fd:
+        fd.write("INPUT:\n")
+        result_str = "("
+        for i, path in enumerate(kmc_input_files):
+            fd.write(f"set{i+1} = {path}\n")
+            result_str += "set{} + ".format(i+1)
+        result_str = result_str[:-2] + ")"
+        fd.write("OUTPUT:\n")
+        fd.write(f"step_7/k_{k}/all_datasets.transformed.combined.transformed.combined = {result_str}\n")
+    
+exit(1)
+
+###########################################################
+# Helper Functions for Snakemake rules
+###########################################################
+
+def get_group_set(wildcards):
+    """ Based on the group, this function will find all the input files """
+    input_files = []
+    for data_file in os.listdir(f"data/dataset_{wildcards.num}"):
+        if data_file.endswith(".fna.gz"):
+            file_name = data_file.split(".fna.gz")[0]
+            input_files.append(f"step_2/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
+    return input_files
+
+def get_across_group_union(wildcards):
+    """ Returns the input files for this union operation - union across all groups """
+    k_value = wildcards.k
+    input_files = [f"step_6/k_{k_value}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre" for num in range(1, num_datasets+1)]
+    return input_files
+
+def get_num_of_dataset_members(dataset_num):
+    """ Returns the number of genomes in a particular dataset """
+    num = 0
+    for data_file in os.listdir(f"data/dataset_{dataset_num}"):
+        if data_file.endswith(".fna.gz"):
+            num += 1
+    return num
+
+def summarize_histogram(hist_counts, num_dataset_members, across_group_analysis):
+    """ 
+        Takes in histogram of kmer occurrences, and returns the metrics for the 
+        bar charts summarized below:
+
+            %_1_occ - percentage of unique kmers that only occur in one genome
+            %_25_or_less - percentage of unique kmers that occur in multiple genomes, in 25% of the genomes or less
+            %_25_to_75 - percentage of unique kmers that occur in multiple genomes, in 25% to 75% of the genomes
+            %_75_or_more - percentage of unique kmers that occur in multiple genomes, in 75% or more of the genomes
+            unique_stat - weighted sum of kmer occurrents = SUM([occ * %_unique_occ for occ in range(255)]) 
+    """
+    metrics = [0, 0, 0, 0, 0]
+    total_unique_kmers = sum(hist_counts)
+    
+    boundaries = [0.25, 0.75]
+    boundary_indices = [int(percent * num_dataset_members) for percent in boundaries]
+
+    if across_group_analysis:
+        boundary_indices = [5, 20]
+
+    metrics[0] = round(hist_counts[0]/total_unique_kmers, 3)
+    metrics[1] = round(sum([hist_counts[i] for i in range(1, boundary_indices[0])])/total_unique_kmers, 3)
+    metrics[2] = round(sum([hist_counts[i] for i in range(boundary_indices[0], boundary_indices[1])])/total_unique_kmers, 3)
+    metrics[3] = round(sum([hist_counts[i] for i in range(boundary_indices[1], 255)])/total_unique_kmers, 3)
+    metrics[4] = round(sum([((i+1) * (hist_counts[i]/total_unique_kmers)) for i in range(0, 255)]), 4)
+    return metrics
+
+###########################################################
+# Start of Snakemake rules ...
+###########################################################
+
+rule all:
+    input:
+        "step_5/within_datasets_analysis.csv",
+        "step_9/across_datasets_analysis.csv"
+
+rule build_kmc_database_on_genome:
+    input:
+        "data/dataset_{num}/{genome}.fna.gz"
+    output:
+        "step_1/k_{k}/dataset_{num}/{genome}.kmc_pre", 
+        "step_1/k_{k}/dataset_{num}/{genome}.kmc_suf"
+    shell:
+        "kmc -fm -k{wildcards.k} -ci1 {input} step_1/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} tmp/"
+
+rule transform_genome_to_set:
+    input: 
+        "step_1/k_{k}/dataset_{num}/{genome}.kmc_pre",
+        "step_1/k_{k}/dataset_{num}/{genome}.kmc_suf"
+    output:
+        "step_2/k_{k}/dataset_{num}/{genome}.transformed.kmc_pre",
+        "step_2/k_{k}/dataset_{num}/{genome}.transformed.kmc_suf"
+    shell:
+        "kmc_tools transform step_1/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} set_counts 1 step_2/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed"
+
+rule within_group_union:
+    input:
+        get_group_set
+    output:
+        "step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+    shell:
+        "kmc_tools complex complex_ops/within_groups/k_{wildcards.k}/dataset_{wildcards.num}/within_dataset_{wildcards.num}.txt"
+
+rule within_group_union_histogram:
+    input:
+        "step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+    output:
+        "step_4/k_{k}/dataset_{num}/dataset_{num}_k{k}_hist.txt"
+    shell:
+        "kmc_tools transform step_3/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined histogram step_4/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}_k{wildcards.k}_hist.txt"
+
+rule within_group_union_analysis:
+    input:
+        expand("step_4/k_{k_len}/dataset_{num}/dataset_{num}_k{k_len}_hist.txt", k_len=k_values, num=list(range(1, num_datasets+1)))
+    output:
+        "step_5/within_datasets_analysis.csv"
+    run:
+        with open(output[0], "w") as out_fd:
+            out_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,unique_stat\n")
+            for input_file in input:
+                parts = input_file.split("/")
+
+                k = parts[1][2:]
+                dataset_num = parts[2].split("_")[1]
+                num_dataset_members = get_num_of_dataset_members(dataset_num)
+
+                with open(input_file, "r") as input_fd:
+                    hist_results = input_fd.readlines()
+                    hist_counts = [int(record.split()[1]) for record in hist_results]
+                
+                metrics = summarize_histogram(hist_counts, num_dataset_members, False)
+                metrics_str = ",".join([str(x) for x in metrics])
+
+                out_fd.write(f"group_{dataset_num},{k},{metrics_str}\n")
+
+rule build_group_kmer_set:
+    input:
+        "step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "step_3/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+    output:
+        "step_6/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre",
+        "step_6/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_suf"
+    shell:
+        "kmc_tools transform step_3/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined set_counts 1 step_6/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed"
+    
+rule across_group_union:
+    input:
+        get_across_group_union
+    output:
+        "step_7/k_{k}/all_datasets.transformed.combined.transformed.combined.kmc_pre",
+        "step_7/k_{k}/all_datasets.transformed.combined.transformed.combined.kmc_suf"
+    shell:
+        "kmc_tools complex complex_ops/across_groups/k_{wildcards.k}/across_all_datasets.txt"
+
+rule across_group_union_histogram:
+    input:
+        "step_7/k_{k}/all_datasets.transformed.combined.transformed.combined.kmc_pre",
+        "step_7/k_{k}/all_datasets.transformed.combined.transformed.combined.kmc_suf"
+    output:
+        "step_8/k_{k}/all_datasets_k{k}_hist.txt"
+    shell:
+        "kmc_tools transform step_7/k_{wildcards.k}/all_datasets.transformed.combined.transformed.combined histogram step_8/k_{wildcards.k}/all_datasets_k{wildcards.k}_hist.txt"
+
+
+rule across_group_union_analysis:
+    input:
+        expand("step_8/k_{k_len}/all_datasets_k{k_len}_hist.txt", k_len=k_values)
+    output:
+        "step_9/across_datasets_analysis.csv"
+    run:
+        with open(output[0], "w") as out_fd:
+            out_fd.write(f"group_num,k,percent_1_occ,percent_2_to_5,percent_5_to_20,percent_20_more,unique_stat\n")
+            for input_file in input:
+                parts = input_file.split("/")
+
+                k = parts[1][2:]
+                dataset_num = parts[2].split("_")[1]
+                num_dataset_members = num_datasets
+
+                with open(input_file, "r") as input_fd:
+                    hist_results = input_fd.readlines()
+                    hist_counts = [int(record.split()[1]) for record in hist_results]
+                
+                metrics = summarize_histogram(hist_counts, num_dataset_members, True)
+                metrics_str = ",".join([str(x) for x in metrics])
+
+                out_fd.write(f"group_{dataset_num},{k},{metrics_str}\n")
+
+
+
+
+
+
+
+
