@@ -41,7 +41,7 @@ def run_command(command, loading_bar, sleep_time=1):
 # https://www.biostars.org/p/255212/
 ##################################################################
 
-def find_refseq_ftp_paths(requested_species):
+def find_refseq_ftp_paths(requested_species, using_file_input):
     """ Finds all the RefSeq FTP links for requested species """
     command = ("esearch -db assembly -query '(\"{}\"[Organism] OR {}[All Fields]) AND ((latest[filter] OR \"latest refseq\"[filter]) AND \"complete genome\"[filter] AND all[filter] NOT anomalous[filter])'"
                " | esummary | "
@@ -50,15 +50,17 @@ def find_refseq_ftp_paths(requested_species):
 
     # Executes the command to figure out how many assemblies there are ...
     current_command = command.format(requested_species, requested_species) + " | wc -l"
-    output, error = run_command(current_command, True)
+    output, error = run_command(current_command, (not using_file_input))
 
     # Interprets output, and asks user if they want to download the genomes ...
-    if output.isdigit() and int(output) > 0:
+    if output.isdigit() and int(output) > 0 and not using_file_input:
         response = input(f"\nWe found {output} complete genomes for {requested_species}. Does that\nsound right, would you like to download them (y/n)? ").upper().strip()
         while response != "Y" and response != "N":
             response = input("\nError in response, do you want to download or not (y/n)? ").upper().strip()
         if response == "N":
-            return
+            return ([], "no")
+    elif output.isdigit() and int(output) > 0 and using_file_input:
+        response = "Y"
     elif output.isdigit() and int(output) == 0:
         print("\nError: No genomes were found for this input.")
         exit(1)
@@ -74,16 +76,18 @@ def find_refseq_ftp_paths(requested_species):
     for ftp_path in output_lines:
         name = ftp_path.split("/")[-2]
         genome_paths.append(ftp_path + name + "_genomic.fna.gz")
-    return genome_paths
+    return (genome_paths, "yes")
 
 def find_genbank_ftp_paths(requested_species):
     """ Finds all the GenBank FTP links for requested species """
     raise NotImplementedError("still working on this ...")
 
-def download_genomes(ftp_paths, output_dir, num):
+def download_genomes(ftp_paths, output_dir, num, num_genomes):
     """ Takes a list of paths, and downloads them to output directory"""
     with open(output_dir + "ftp_paths_for_curr_dataset.txt", "w") as fd:
-        for paths in ftp_paths[:10]:
+        if num_genomes == 0:
+            num_genomes = len(ftp_paths)
+        for paths in ftp_paths[:num_genomes]:
             fd.write(paths + "\n")
     
     filelist = output_dir + "ftp_paths_for_curr_dataset.txt"
@@ -106,13 +110,36 @@ def download_genomes(ftp_paths, output_dir, num):
     #decompress_command = f"for i in $(find {current_dataset_dir} -name '*.fna.gz'); do gzip -d $i; done"
     #output, error = run_command(decompress_command, True)
 
+    return num_genomes
+
 def print_status(args):
     """ It will just state what parameters the user as specified prior to downloading any genomes """
     database = "RefSeq" if args.refseq else "GenBank"
+    input_style = "File Input" if args.input_list != "" else "Console"
 
     print("\nProvided Parameters:")
     print(f"\tGenome Database: {database}")
-    print(f"\tOutput Directory: {args.output_dir}\n")
+    print(f"\tOutput Directory: {args.output_dir}")
+    print(f"\tInput Type: {input_style}\n")
+
+def input_generator(input_file, input_list):
+    """ Generates a sequence of species to download: either from user input or file input """
+    if input_file == "":
+        requested_species = input("Enter the name of species you want to download (type \"done\" to stop): ").strip()
+    else:
+        if len(input_list) > 0:
+            requested_species = input_list[0]
+            input_list.pop(0) # lists are passed by reference
+        else:
+            return "done"
+    return requested_species
+
+def grab_species_from_file(input_list):
+    """ Extracts the species from each line in file """
+    with open(input_list, "r") as input_fd:
+        lines = [x.strip() for x in input_fd.readlines()]
+        lines.remove('') # remove any empty lines
+    return lines
 
 def main(args):
     """
@@ -122,29 +149,41 @@ def main(args):
         user is done.
     """
     dataset_num = 1
+    species_list = []
     dataset_summaries = []
 
+    using_file_input = False
     downloaded_genomes = False
+
+    if args.input_list != "":
+        species_list = grab_species_from_file(args.input_list)
+        using_file_input = True
+
     print_status(args)
     while True:
-        requested_species = input("Enter the name of species you want to download (type \"done\" to stop): ").strip()
+        requested_species = input_generator(args.input_list, species_list)
         if requested_species.upper() == "DONE":
             break
 
         # Determine the paths to genomes for specified species
         if args.refseq:
-            paths = find_refseq_ftp_paths(requested_species)
+            paths, choice = find_refseq_ftp_paths(requested_species, using_file_input)
         elif args.genbank:
-            paths = find_genbank_ftp_paths(requested_species)
+            paths, choice = find_genbank_ftp_paths(requested_species, using_file_input)
+
+        # Decided to not download the genomes ...
+        if choice == "no":
+            print()
+            continue
 
         # Execute the download of those genomes ...
-        download_genomes(paths, args.output_dir, dataset_num)
+        num_downloaded = download_genomes(paths, args.output_dir, dataset_num, args.num_genomes)
         downloaded_genomes = True
 
         dataset_summaries.append([dataset_num, requested_species, len(paths)])
         dataset_num += 1
         print()
-    
+
     # Write out a README explaining what is in each folder ...
     if downloaded_genomes:
         with open(args.output_dir + "README_dataset_summary.txt", "w") as fd:
@@ -160,6 +199,8 @@ def parse_arguments():
     parser.add_argument("-r", "--refseq", action="store_true", default=False, help="download genomes from RefSeq")
     parser.add_argument("-g", "--genbank", action="store_true", default=False, help="download genomes from GenBank")
     parser.add_argument("-o", dest="output_dir", required=True, help="directory where all the genomes will be stored.")
+    parser.add_argument("-f", dest="input_list", help="path to file with species listed on each line to download.", default="")
+    parser.add_argument("-n", dest="num_genomes", help="number of genomes to download from each species (default: all available)", type=int, default=0)
     args = parser.parse_args()
     return args
 
@@ -168,14 +209,25 @@ def check_arguments(args):
     if not args.refseq and not args.genbank:
         print("Error: Need to specify where to download genomes from either RefSeq (-r) or GenBank (-g)")
         exit(1)
+    if args.input_list != "" and not os.path.isfile(args.input_list):
+        print("Error: Input file given via -f option is not a valid path.")
+        exit(1)
     if args.refseq and args.genbank:
         print("Error: Can only choose one database to download from.")
+        exit(1)
+    if args.num_genomes < 0:
+        print("Error: The number of genomes must be a positive integer.")
         exit(1)
     if not os.path.isdir(args.output_dir):
         print("Error: The provided output directory is not valid.")
         exit(1)
     elif args.output_dir[-1] != "/":
         args.output_dir += "/"
+    
+    # Adjust output directory to saves files to data folder (since workflow expects it)...
+    if not os.path.isdir(f"{args.output_dir}data/"):
+        os.mkdir(f"{args.output_dir}data/")
+    args.output_dir += "data/"
 
 if __name__ == "__main__":
     args = parse_arguments()
