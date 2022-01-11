@@ -95,7 +95,7 @@ def download_genomes(ftp_paths, output_dir, num, num_genomes):
 
     # Executes a command to download genomes, remove filelist and
     # then decompress all the genomes
-    
+
     print(f"\nStarting to download files to dataset_{num} folder ...")
     download_command = f"wget --input-file={filelist} --directory-prefix={current_dataset_dir} --no-parent --no-host-directories --cut-dirs=5"
     run_command(download_command, True, sleep_time=10)
@@ -138,7 +138,8 @@ def grab_species_from_file(input_list):
     """ Extracts the species from each line in file """
     with open(input_list, "r") as input_fd:
         lines = [x.strip() for x in input_fd.readlines()]
-        lines.remove('') # remove any empty lines
+        if '' in lines:
+            lines.remove('') # remove any empty lines
     return lines
 
 def main(args):
@@ -180,7 +181,7 @@ def main(args):
         num_downloaded = download_genomes(paths, args.output_dir, dataset_num, args.num_genomes)
         downloaded_genomes = True
 
-        dataset_summaries.append([dataset_num, requested_species, len(paths)])
+        dataset_summaries.append([dataset_num, requested_species, num_downloaded])
         dataset_num += 1
         print()
 

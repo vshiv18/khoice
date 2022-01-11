@@ -82,8 +82,6 @@ for k in k_values:
         fd.write("OUTPUT:\n")
         fd.write(f"step_7/k_{k}/all_datasets.transformed.combined.transformed.combined = {result_str}\n")
     
-exit(1)
-
 ###########################################################
 # Helper Functions for Snakemake rules
 ###########################################################
