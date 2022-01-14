@@ -82,11 +82,20 @@ def find_genbank_ftp_paths(requested_species):
     """ Finds all the GenBank FTP links for requested species """
     raise NotImplementedError("still working on this ...")
 
-def download_genomes(ftp_paths, output_dir, num, num_genomes):
+def download_genomes(ftp_paths, output_dir, num, num_genomes, ratio_genomes):
     """ Takes a list of paths, and downloads them to output directory"""
     with open(output_dir + "ftp_paths_for_curr_dataset.txt", "w") as fd:
-        if num_genomes == 0:
+        # First, figure out if user specified a certain number or ratio ...
+
+        if num_genomes == 0 and ratio_genomes == 0.0: # Case 1 - take all genomes
             num_genomes = len(ftp_paths)
+        elif num_genomes == 0 and ratio_genomes > 0.0: # Case 2 - take a certain ratio
+            num_genomes = int(len(ftp_paths) * ratio_genomes)
+            if num_genomes == 0:
+                print("Error: The ratio provided with -p option was too small.")
+                exit(1)
+        # Case 3 (Default Case) - use the number of genomes directly from command-line
+
         for paths in ftp_paths[:num_genomes]:
             fd.write(paths + "\n")
     
@@ -178,7 +187,7 @@ def main(args):
             continue
 
         # Execute the download of those genomes ...
-        num_downloaded = download_genomes(paths, args.output_dir, dataset_num, args.num_genomes)
+        num_downloaded = download_genomes(paths, args.output_dir, dataset_num, args.num_genomes, args.ratio_genomes)
         downloaded_genomes = True
 
         dataset_summaries.append([dataset_num, requested_species, num_downloaded])
@@ -202,6 +211,7 @@ def parse_arguments():
     parser.add_argument("-o", dest="output_dir", required=True, help="directory where all the genomes will be stored.")
     parser.add_argument("-f", dest="input_list", help="path to file with species listed on each line to download.", default="")
     parser.add_argument("-n", dest="num_genomes", help="number of genomes to download from each species (default: all available)", type=int, default=0)
+    parser.add_argument("-p", dest="ratio_genomes", help="percentage of genomes to download from available (0.0 < x <= 1.0)", type=float, default=0.0)
     args = parser.parse_args()
     return args
 
@@ -218,6 +228,15 @@ def check_arguments(args):
         exit(1)
     if args.num_genomes < 0:
         print("Error: The number of genomes must be a positive integer.")
+        exit(1)
+    if args.ratio_genomes < 0.0:
+        print("Error: The ratio of genomes to download must be a positive ratio (0.0 < x <= 1.0)")
+        exit(1)
+    if args.ratio_genomes > 1.0:
+        print("Error: The ratio of genomes to download must be between 0.0 < x <= 1.0.")
+        exit(1)
+    if args.num_genomes > 0 and args.ratio_genomes > 0.0:
+        print("Error: The -n and -p options cannot be used at same time, just one of them or neither.")
         exit(1)
     if not os.path.isdir(args.output_dir):
         print("Error: The provided output directory is not valid.")
