@@ -127,15 +127,21 @@ def summarize_histogram(hist_counts, num_dataset_members, across_group_analysis)
     
     boundaries = [0.25, 0.75]
     boundary_indices = [int(percent * num_dataset_members) for percent in boundaries]
-
+    
+    # Special cases where indices are customized ...
+    if num_dataset_members == 1:
+        boundary_indices = [1, 1]
     if across_group_analysis:
         boundary_indices = [5, 20]
 
     metrics[0] = round(hist_counts[0]/total_unique_kmers, 3)
     metrics[1] = round(sum([hist_counts[i] for i in range(1, boundary_indices[0])])/total_unique_kmers, 3)
     metrics[2] = round(sum([hist_counts[i] for i in range(boundary_indices[0], boundary_indices[1])])/total_unique_kmers, 3)
-    metrics[3] = round(sum([hist_counts[i] for i in range(boundary_indices[1], 255)])/total_unique_kmers, 3)
-    metrics[4] = round(sum([((i+1) * (hist_counts[i]/total_unique_kmers)) for i in range(0, 255)]), 4)
+    metrics[3] = round(sum([hist_counts[i] for i in range(boundary_indices[1], len(hist_counts))])/total_unique_kmers, 3)
+    metrics[4] = round(sum([((i+1) * (hist_counts[i]/total_unique_kmers)) for i in range(0, len(hist_counts))]), 4)
+    
+    rounding_error = abs(sum(metrics[0:4])-1) 
+    assert rounding_error < 0.05, "Issue occurred with histogram summarization"
     return metrics
 
 ###########################################################
