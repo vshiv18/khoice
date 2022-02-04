@@ -124,8 +124,6 @@ def summarize_histogram(sub_counts, inter_counts, num_genomes_in_dataset, across
     # Perform a couple of assertions to start ...
     assert inter_counts[0] == 0, "intersection counts should have 0 unique kmers"
     assert sum(sub_counts[1:]) == 0, "all of kmers in sub_counts should be unique"
-    print(inter_counts[:10])
-    print(sub_counts[:10])
 
     # Start to calculate the metrics ...
     metrics = [0, 0, 0, 0, 0]
@@ -133,7 +131,7 @@ def summarize_histogram(sub_counts, inter_counts, num_genomes_in_dataset, across
 
     boundaries = [0.25, 0.75]
     boundary_indices = [max(int(percent * num_genomes_in_dataset), 1) for percent in boundaries]
-    print(boundary_indices)
+
     # Special cases where indices are customized ...
     if across_group_analysis:
         boundary_indices = [5, 20]
