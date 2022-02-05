@@ -1,3 +1,3 @@
-DATA_ROOT: "/home/oahmed6/scr16_blangme2/oahmed/khoice_exps/test"
-NUM_DATASETS: 2
+DATA_ROOT: "/home/oahmed6/scr16_blangme2/oahmed/khoice_exps/exp_1a"
+NUM_DATASETS: 4
 EXP_TYPE: 2

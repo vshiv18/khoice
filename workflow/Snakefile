@@ -15,7 +15,7 @@ configfile: "config/config.yaml"
 num_datasets = config["NUM_DATASETS"]
 base_dir = config["DATA_ROOT"]
 exp_type = config["EXP_TYPE"]
-k_values = ["7", "15", "31"]
+k_values = ["7","9","11","13","15","17","21","23","25","27","29","31","33","35","37"]
 
 ###############################################################################
 # IMPORTANT: Sets the working directory based on configuration parameter, and 
@@ -32,8 +32,8 @@ include: "rules/exp_type_2.smk"
 
 rule all:
     input:
-        "step_5/within_datasets_analysis.csv",
-        "step_9/across_datasets_analysis.csv"
+        "within_dataset_analysis/within_dataset_analysis.csv",
+        "across_dataset_analysis/across_dataset_analysis.csv"
 
 
 
