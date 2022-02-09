@@ -14,11 +14,11 @@ library(data.table)
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 ########################################################################
-within_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_1d/within_dataset_analysis.csv"
-across_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_1d/across_dataset_analysis.csv"
+within_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_2a/within_dataset_analysis.csv"
+across_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_2a/across_dataset_analysis.csv"
 
-dataset_names <- c("Bacillus cereus", "Bacillus anthracis", "Bacillus thuringiensis", "Bacillus weihenstephanensis")
-working_dir <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_1d/"
+dataset_names <- c("Escherichia coli", "Escherichia marmotae", "Escherichia albertii", "Escherichia fergusonii")
+working_dir <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_2a/"
 
 ########################################################################
 # Methods for generating the two types of plots: within groups, and 
