@@ -157,7 +157,7 @@ def get_across_group_histogram_files(wildcards):
                 input_files.append(f"across_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt")
     return input_files
 
-def summarize_histogram(sub_counts, inter_counts, num_genomes_in_dataset, across_group_analysis):
+def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, across_group_analysis):
     """ 
         Takes in histogram of kmer occurrences, and returns the metrics for the 
         bar charts summarized below:
@@ -333,7 +333,7 @@ rule within_group_analysis_exp_type2:
                     inter_results = inter_fd.readlines()
                     inter_counts = [int(record.split()[1]) for record in inter_results]
                 
-                metrics = summarize_histogram(sub_counts, inter_counts, num_genomes_in_dataset, False)
+                metrics = summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, False)
                 metrics_str = ",".join([str(x) for x in metrics])
 
                 output_fd.write(f"group_{dataset_num},{k_value},{metrics_str}\n")
@@ -431,7 +431,7 @@ rule across_group_analysis_exp_type2:
                     inter_results = inter_fd.readlines()
                     inter_counts = [int(record.split()[1]) for record in inter_results]
                 
-                metrics = summarize_histogram(sub_counts, inter_counts, num_datasets, True)
+                metrics = summarize_histogram_type2(sub_counts, inter_counts, num_datasets, True)
                 metrics_str = ",".join([str(x) for x in metrics])
 
                 output_fd.write(f"group_{dataset_num},{k_value},{metrics_str}\n")
