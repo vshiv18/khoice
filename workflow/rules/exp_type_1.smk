@@ -110,7 +110,7 @@ def get_num_of_dataset_members(dataset_num):
             num += 1
     return num
 
-def summarize_histogram(hist_counts, num_dataset_members, across_group_analysis):
+def summarize_histogram_type1(hist_counts, num_dataset_members, across_group_analysis, k):
     """ 
         Takes in histogram of kmer occurrences, and returns the metrics for the 
         bar charts summarized below:
@@ -121,7 +121,7 @@ def summarize_histogram(hist_counts, num_dataset_members, across_group_analysis)
             %_75_or_more - percentage of unique kmers that occur in multiple genomes, in 75% or more of the genomes
             unique_stat - weighted sum of kmer occurrents = SUM([occ * %_unique_occ for occ in range(255)]) 
     """
-    metrics = [0, 0, 0, 0, 0]
+    metrics = [0 for i in range(6)]
     total_unique_kmers = sum(hist_counts)
     
     boundaries = [0.25, 0.75]
@@ -139,6 +139,9 @@ def summarize_histogram(hist_counts, num_dataset_members, across_group_analysis)
     
     rounding_error = abs(sum(metrics[0:4])-1) 
     assert rounding_error < 0.05, "Issue occurred with histogram summarization"
+
+    # Calculate the fraction used by the delta measure
+    metrics[5] = round(total_unique_kmers/k, 4)
     return metrics
 
 ####################################################
@@ -189,7 +192,7 @@ rule within_group_union_analysis:
         "step_5/within_datasets_analysis.csv"
     run:
         with open(output[0], "w") as out_fd:
-            out_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,unique_stat\n")
+            out_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,unique_stat,delta_frac\n")
             for input_file in input:
                 parts = input_file.split("/")
 
@@ -201,7 +204,7 @@ rule within_group_union_analysis:
                     hist_results = input_fd.readlines()
                     hist_counts = [int(record.split()[1]) for record in hist_results]
                 
-                metrics = summarize_histogram(hist_counts, num_dataset_members, False)
+                metrics = summarize_histogram_type1(hist_counts, num_dataset_members, False, int(k))
                 metrics_str = ",".join([str(x) for x in metrics])
 
                 out_fd.write(f"group_{dataset_num},{k},{metrics_str}\n")
@@ -242,7 +245,7 @@ rule across_group_union_analysis:
         "step_9/across_datasets_analysis.csv"
     run:
         with open(output[0], "w") as out_fd:
-            out_fd.write(f"group_num,k,percent_1_occ,percent_2_to_5,percent_5_to_20,percent_20_more,unique_stat\n")
+            out_fd.write(f"group_num,k,percent_1_occ,percent_2_to_5,percent_5_to_20,percent_20_more,unique_stat,delta_frac\n")
             for input_file in input:
                 parts = input_file.split("/")
 
@@ -254,7 +257,19 @@ rule across_group_union_analysis:
                     hist_results = input_fd.readlines()
                     hist_counts = [int(record.split()[1]) for record in hist_results]
                 
-                metrics = summarize_histogram(hist_counts, num_dataset_members, True)
+                metrics = summarize_histogram_type1(hist_counts, num_dataset_members, True, int(k))
                 metrics_str = ",".join([str(x) for x in metrics])
 
                 out_fd.write(f"group_{dataset_num},{k},{metrics_str}\n")
+
+rule copy_final_results_type1:
+    input:
+        "step_5/within_datasets_analysis.csv",
+        "step_9/across_datasets_analysis.csv"
+    output:
+        "final_results_type1/within_datasets_analysis.csv",
+        "final_results_type1/across_datasets_analysis.csv"
+    run:
+        shell("cp {input[0]} {output[0]}")
+        shell("cp {input[1]} {output[1]}")
+
