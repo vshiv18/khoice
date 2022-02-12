@@ -1,5 +1,5 @@
 #####################################################
-# Name: kmer_plots.R
+# Name: kmer_plots_type1.R
 # Description: Generates stacked bar charts using
 #              results produced by the snakemake
 #              workflow.
@@ -14,11 +14,11 @@ library(data.table)
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 ########################################################################
-within_groups_data_path <- "/Users/omarahmed/Downloads/khoice_exps/exp_3d/within_datasets_analysis.csv"
-across_groups_data_path <- "/Users/omarahmed/Downloads/khoice_exps/exp_3d/across_datasets_analysis.csv"
+within_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/test_1/within_datasets_analysis.csv"
+across_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/test_1/across_datasets_analysis.csv"
 
-dataset_names <- c("Bacillus cereus", "Bacillus anthracis", "Bacillus thuringiensis", "Bacillus weihenstephanensis")
-working_dir <- "/Users/omarahmed/Downloads/khoice_exps/exp_3d/"
+dataset_names <- c("Escherichia coli", "Salmonella enterica")
+working_dir <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/test_1/"
 
 ########################################################################
 # Methods for generating the two types of plots: within groups, and 
@@ -29,7 +29,7 @@ make_within_groups_plot <- function(group_df, name) {
   # Convert to data.table, melt, and then revert to data.frame
   setDT(group_df)
   group_df_melt <- melt(group_df, 
-                        measure.vars = c("percent_1_occ", "percent_25_or_less", "percent_25_to_75", "percent_75_or_more"),
+                        measure.vars = c("percent_75_or_more","percent_25_to_75","percent_25_or_less","percent_1_occ"),
                         variable.name = "range", 
                         value.name = "percent")
   setDF(group_df_melt)
@@ -51,16 +51,22 @@ make_within_groups_plot <- function(group_df, name) {
              y="Ratio of Unique Kmers",
              title=graph_title) +
         scale_fill_discrete(name = "Number of Genomes the Kmers Occur In:",
-                            labels = c("One Genome","< 25% of Genomes", "25% to 75% of Genomes", ">75% of Genomes")) +
+                            labels = c(">75% of Genomes","25% to 75% of Genomes","< 25% of Genomes","One Genome")) +
         guides(fill= guide_legend(nrow = 2))
   return (plot)
 }
 
 make_uniqueness_plot <- function(group_df) {
+  # Determine the coefficient used for scaling second axis
+  coeff <- max(group_df$delta_frac)/max(group_df$unique_stat)
+  
+  # Make the plot
   graph_title <- "Uniqueness statistic as k increases for each dataset"
-  plot <- ggplot(group_df, aes(x=k, y=unique_stat)) + 
-          geom_line(aes(color=group_num)) +
-          geom_point(aes(color=group_num)) +
+  plot <- ggplot(group_df, aes(x=k)) + 
+          geom_line(aes(y=unique_stat, color=group_num)) +
+          geom_point(aes(y=unique_stat, color=group_num)) +
+          geom_line(aes(y=delta_frac/coeff, color=group_num), linetype="dashed")+
+          geom_point(aes(y=delta_frac/coeff, color=group_num))+
           theme_bw() +
           theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
                 axis.title.x=element_text(size =14),
@@ -77,7 +83,10 @@ make_uniqueness_plot <- function(group_df) {
                                labels=dataset_names) +
           #scale_shape_discrete(name="Dataset",labels=dataset_names) +
           scale_x_continuous(breaks=seq(0, 100, 5)) +
-          geom_hline(yintercept=1, linetype="dashed", color = "red", size=1) +
+          geom_hline(yintercept=1, color = "red", size=0.5) +
+          scale_y_continuous(name="Uniqueness Statistic", 
+                       sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k", 
+                                           labels = function(x) format(x, scientific = TRUE)))+
           guides(fill= guide_legend(nrow = 3))
           
   return (plot)
@@ -87,7 +96,7 @@ make_across_groups_plot <- function(group_df) {
   # Convert to data.table, melt, and then revert to data.frame
   setDT(group_df)
   group_df_melt <- melt(group_df, 
-                        measure.vars = c("percent_1_occ", "percent_2_to_5", "percent_5_to_20"),
+                        measure.vars = c("percent_5_to_20","percent_2_to_5","percent_1_occ"),
                         variable.name = "range", 
                         value.name = "percent")
   setDF(group_df_melt)
@@ -109,15 +118,21 @@ make_across_groups_plot <- function(group_df) {
                y="Ratio of Unique Kmers",
                title=graph_title) +
           scale_fill_discrete(name = "Number of Groups the Kmers Occur In:",
-                        labels = c("One Group","2 to 4 Groups", "5 to 8 Groups"))
+                        labels = c("5 to 8 Groups","2 to 4 Groups","One Group"))
   return (plot)
 }
 
 make_uniqueness_plot_across_groups <- function(group_df) {
+  # Determine the coefficient used for scaling second axis
+  coeff <- max(group_df$delta_frac)/max(group_df$unique_stat)
+  
+  # Make the plot
   graph_title <- paste("Uniqueness statistic across all", length(dataset_names),"datasets as k increases")
-  plot <- ggplot(group_df, aes(x=k, y=unique_stat)) + 
-          geom_line() +
-          geom_point() +
+  plot <- ggplot(group_df, aes(x=k)) + 
+          geom_line(aes(y=unique_stat), color="dodgerblue") +
+          geom_line(aes(y=delta_frac/coeff), color="dodgerblue", linetype="dashed")+
+          geom_point(aes(y=unique_stat), color="dodgerblue") +
+          geom_point(aes(y=delta_frac/coeff), color="dodgerblue") +
           theme_bw() +
           theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
                 axis.title.x=element_text(size =14),
@@ -131,7 +146,10 @@ make_uniqueness_plot_across_groups <- function(group_df) {
                y="Uniqueness Statistic",
                title=graph_title) +
           scale_x_continuous(breaks=seq(0, 100, 5)) +
-          geom_hline(yintercept=1, linetype="dashed", color = "red", size=1)
+          scale_y_continuous(name="Uniqueness Statistic", 
+                             sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k", 
+                                                 labels = function(x) format(x, scientific = TRUE)))+
+          geom_hline(yintercept=1, color = "red", size=0.5)
   
   return (plot)
 }
