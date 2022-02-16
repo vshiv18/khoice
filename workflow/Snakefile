@@ -17,7 +17,7 @@ base_dir = config["DATA_ROOT"]
 exp_type = config["EXP_TYPE"]
 num_reads_per_dataset =  config["READS_PER_DATASET"]
 pbsim_model = config["PBSIM_MODEL"]
-k_values = [str(x) for x in range(7, 41, 2)]
+k_values = [str(x) for x in range(7, 23, 1)] + [str(x) for x in range(23, 37, 2)]
 
 ###############################################################################
 # IMPORTANT: Sets the working directory based on configuration parameter, and 
