@@ -121,7 +121,7 @@ def summarize_histogram_type1(hist_counts, num_dataset_members, across_group_ana
             %_75_or_more - percentage of unique kmers that occur in multiple genomes, in 75% or more of the genomes
             unique_stat - weighted sum of kmer occurrents = SUM([occ * %_unique_occ for occ in range(255)]) 
     """
-    metrics = [0 for i in range(6)]
+    metrics = [0 for i in range(7)]
     total_unique_kmers = sum(hist_counts)
     
     boundaries = [0.25, 0.75]
@@ -135,13 +135,16 @@ def summarize_histogram_type1(hist_counts, num_dataset_members, across_group_ana
     metrics[1] = round(sum([hist_counts[i] for i in range(1, boundary_indices[0])])/total_unique_kmers, 3)
     metrics[2] = round(sum([hist_counts[i] for i in range(boundary_indices[0], boundary_indices[1])])/total_unique_kmers, 3)
     metrics[3] = round(sum([hist_counts[i] for i in range(boundary_indices[1], len(hist_counts))])/total_unique_kmers, 3)
-    metrics[4] = round(sum([((i+1) * (hist_counts[i]/total_unique_kmers)) for i in range(0, len(hist_counts))]), 4)
-    
+
     rounding_error = abs(sum(metrics[0:4])-1) 
     assert rounding_error < 0.05, "Issue occurred with histogram summarization"
 
+    # Both unnormalized, and normalized uniqueness statistics
+    metrics[4] = round(sum([((i+1) * (hist_counts[i]/total_unique_kmers)) for i in range(0, len(hist_counts))]), 4)
+    metrics[5] = round(sum([(((i+1)/num_dataset_members) * (hist_counts[i]/total_unique_kmers)) for i in range(0, len(hist_counts))]), 4)
+
     # Calculate the fraction used by the delta measure
-    metrics[5] = round(total_unique_kmers/k, 4)
+    metrics[6] = round(total_unique_kmers/k, 4)
     return metrics
 
 ####################################################
@@ -192,7 +195,9 @@ rule within_group_union_analysis:
         "step_5/within_datasets_analysis.csv"
     run:
         with open(output[0], "w") as out_fd:
-            out_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,unique_stat,delta_frac\n")
+            out_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,"
+                          "percent_75_or_more,unique_stat,unique_stat_norm,delta_frac,delta_frac_norm\n")
+            all_metrics = []
             for input_file in input:
                 parts = input_file.split("/")
 
@@ -204,10 +209,24 @@ rule within_group_union_analysis:
                     hist_results = input_fd.readlines()
                     hist_counts = [int(record.split()[1]) for record in hist_results]
                 
-                metrics = summarize_histogram_type1(hist_counts, num_dataset_members, False, int(k))
-                metrics_str = ",".join([str(x) for x in metrics])
+                metrics = [f"group_{dataset_num}", k] + summarize_histogram_type1(hist_counts, num_dataset_members, False, int(k))
+                all_metrics.append(metrics)
+                            
+            # Generate the normalized cardinality/k values for each group
+            for i in range(1, num_datasets+1):
+                id_str = f"group_{i}"
+                values = [metrics[8] for metrics in all_metrics if metrics[0] == id_str]
+                max_ratio = max(values)
 
-                out_fd.write(f"group_{dataset_num},{k},{metrics_str}\n")
+                # Divide all the values in that group with the max value
+                for metrics in all_metrics:
+                    if metrics[0] == id_str:
+                        metrics.append(round(metrics[8]/max_ratio, 4))
+            
+            # Print all the values to csv file
+            for metrics in all_metrics:
+                metrics_str = ",".join([str(x) for x in metrics])
+                out_fd.write(f"{metrics_str}\n")
 
 rule build_group_kmer_set:
     input:
@@ -245,7 +264,9 @@ rule across_group_union_analysis:
         "step_9/across_datasets_analysis.csv"
     run:
         with open(output[0], "w") as out_fd:
-            out_fd.write(f"group_num,k,percent_1_occ,percent_2_to_5,percent_5_to_20,percent_20_more,unique_stat,delta_frac\n")
+            out_fd.write(f"group_num,k,percent_1_occ,percent_2_to_5,percent_5_to_20,percent_20_more,"
+                          "unique_stat,unique_stat_norm,delta_frac,delta_frac_norm\n")
+            all_metrics = []
             for input_file in input:
                 parts = input_file.split("/")
 
@@ -257,10 +278,21 @@ rule across_group_union_analysis:
                     hist_results = input_fd.readlines()
                     hist_counts = [int(record.split()[1]) for record in hist_results]
                 
-                metrics = summarize_histogram_type1(hist_counts, num_dataset_members, True, int(k))
-                metrics_str = ",".join([str(x) for x in metrics])
+                metrics = ["full_group", k] + summarize_histogram_type1(hist_counts, num_dataset_members, True, int(k))
+                all_metrics.append(metrics)
 
-                out_fd.write(f"group_{dataset_num},{k},{metrics_str}\n")
+            # Determine the maximum delta fraction, and use it to normalize
+            values = [metrics[8] for metrics in all_metrics]
+            max_ratio = max(values)
+
+            # Divide all the values in that group with the max value
+            for metrics in all_metrics:
+                metrics.append(round(metrics[8]/max_ratio, 4))
+            
+            # Print all the values to csv file
+            for metrics in all_metrics:
+                metrics_str = ",".join([str(x) for x in metrics])
+                out_fd.write(f"{metrics_str}\n")
 
 rule copy_final_results_type1:
     input:
