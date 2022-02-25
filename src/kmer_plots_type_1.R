@@ -14,16 +14,18 @@ library(data.table)
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 ########################################################################
-within_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/test_1/within_datasets_analysis.csv"
-across_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/test_1/across_datasets_analysis.csv"
+within_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/exp_2d/within_datasets_analysis.csv"
+across_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/exp_2d/across_datasets_analysis.csv"
 
-dataset_names <- c("Escherichia coli", "Salmonella enterica")
-working_dir <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/test_1/"
+dataset_names <- c("Bacillus cereus", "Bacillus anthracis", "Bacillus thuringiensis", "Bacillus weihenstephanensis")
+working_dir <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_1/exp_2d/"
 
 ########################################################################
 # Methods for generating the two types of plots: within groups, and 
 # across of multiple groups
 ########################################################################
+
+# Section 1: Methods for within group experiment
 
 make_within_groups_plot <- function(group_df, name) {
   # Convert to data.table, melt, and then revert to data.frame
@@ -58,15 +60,15 @@ make_within_groups_plot <- function(group_df, name) {
 
 make_uniqueness_plot <- function(group_df) {
   # Determine the coefficient used for scaling second axis
-  coeff <- max(group_df$delta_frac)/max(group_df$unique_stat)
-  
+  coeff <- max(group_df$delta_frac_norm)/max(group_df$unique_stat_norm)
+
   # Make the plot
   graph_title <- "Uniqueness statistic as k increases for each dataset"
   plot <- ggplot(group_df, aes(x=k)) + 
-          geom_line(aes(y=unique_stat, color=group_num)) +
-          geom_point(aes(y=unique_stat, color=group_num)) +
-          geom_line(aes(y=delta_frac/coeff, color=group_num), linetype="dashed")+
-          geom_point(aes(y=delta_frac/coeff, color=group_num))+
+          geom_line(aes(y=unique_stat_norm, color=group_num)) +
+          #geom_point(aes(y=unique_stat_norm, color=group_num)) +
+          geom_line(aes(y=delta_frac_norm/coeff, color=group_num), linetype="dashed")+
+          #geom_point(aes(y=delta_frac_norm/coeff, color=group_num))+
           theme_bw() +
           theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
                 axis.title.x=element_text(size =14),
@@ -77,20 +79,57 @@ make_uniqueness_plot <- function(group_df) {
                 legend.title=element_text(size=10),
                 axis.text=element_text(size=14, color="black")) +
           labs(x="Kmer Length (k)",
-               y="Uniqueness Statistic",
+               y="Uniqueness Statistic - normalized",
                title=graph_title) +
           scale_color_discrete(name="Dataset",
                                labels=dataset_names) +
-          #scale_shape_discrete(name="Dataset",labels=dataset_names) +
           scale_x_continuous(breaks=seq(0, 100, 5)) +
-          geom_hline(yintercept=1, color = "red", size=0.5) +
-          scale_y_continuous(name="Uniqueness Statistic", 
-                       sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k", 
+          #geom_hline(yintercept=1, color = "red", size=0.5) +
+          scale_y_continuous(name="Uniqueness Statistic - normalized", 
+                       sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k - normalized", 
                                            labels = function(x) format(x, scientific = TRUE)))+
           guides(fill= guide_legend(nrow = 3))
           
   return (plot)
 }
+
+make_uniqueness_plot_second_derivative <- function(group_df) {
+  # Determine the coefficient used for scaling second axis
+  coeff <- max(group_df$delta_frac_norm)/max(group_df$unique_stat_dd, na.rm=T)
+  
+  # Make the plot
+  graph_title <- "Second derivative of uniqueness statistic as k increases for each dataset"
+  plot <- ggplot(group_df, aes(x=k)) + 
+    geom_line(aes(y=unique_stat_dd, color=group_num)) +
+    #geom_point(aes(y=unique_stat_dd, color=group_num)) +
+    geom_line(aes(y=delta_frac_norm/coeff, color=group_num), linetype="dashed")+
+    #geom_point(aes(y=delta_frac_norm/coeff, color=group_num))+
+    theme_bw() +
+    theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
+          axis.title.x=element_text(size =14),
+          axis.title.y=element_text(size=14),
+          legend.position = "bottom", 
+          legend.text=element_text(size=10),
+          legend.box="vertical",
+          legend.title=element_text(size=10),
+          axis.text=element_text(size=14, color="black")) +
+    labs(x="Kmer Length (k)",
+         y="Uniqueness Statistic'' - normalized",
+         title=graph_title) +
+    scale_color_discrete(name="Dataset",
+                         labels=dataset_names) +
+    scale_x_continuous(breaks=seq(0, 100, 5)) +
+    #geom_hline(yintercept=1, color = "red", size=0.5) +
+    scale_y_continuous(name="Uniqueness Statistic'' - normalized", 
+                       sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k - normalized", 
+                                           labels = function(x) format(x, scientific = TRUE)))+
+    guides(fill= guide_legend(nrow = 3))
+  
+  return (plot)
+}
+
+
+# Section 2: Methods from across groups experiments
 
 make_across_groups_plot <- function(group_df) {
   # Convert to data.table, melt, and then revert to data.frame
@@ -124,15 +163,15 @@ make_across_groups_plot <- function(group_df) {
 
 make_uniqueness_plot_across_groups <- function(group_df) {
   # Determine the coefficient used for scaling second axis
-  coeff <- max(group_df$delta_frac)/max(group_df$unique_stat)
+  coeff <- max(group_df$delta_frac_norm)/max(group_df$unique_stat_norm)
   
   # Make the plot
   graph_title <- paste("Uniqueness statistic across all", length(dataset_names),"datasets as k increases")
   plot <- ggplot(group_df, aes(x=k)) + 
-          geom_line(aes(y=unique_stat), color="dodgerblue") +
-          geom_line(aes(y=delta_frac/coeff), color="dodgerblue", linetype="dashed")+
-          geom_point(aes(y=unique_stat), color="dodgerblue") +
-          geom_point(aes(y=delta_frac/coeff), color="dodgerblue") +
+          geom_line(aes(y=unique_stat_norm), color="dodgerblue") +
+          geom_line(aes(y=delta_frac_norm/coeff), color="dodgerblue", linetype="dashed")+
+          #geom_point(aes(y=unique_stat), color="dodgerblue") +
+          #geom_point(aes(y=delta_frac/coeff), color="dodgerblue") +
           theme_bw() +
           theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
                 axis.title.x=element_text(size =14),
@@ -143,13 +182,45 @@ make_uniqueness_plot_across_groups <- function(group_df) {
                 legend.title=element_text(size=10),
                 axis.text=element_text(size=14, color="black")) +
           labs(x="Kmer Length (k)",
-               y="Uniqueness Statistic",
+               y="Uniqueness Statistic - normalized",
                title=graph_title) +
           scale_x_continuous(breaks=seq(0, 100, 5)) +
-          scale_y_continuous(name="Uniqueness Statistic", 
-                             sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k", 
-                                                 labels = function(x) format(x, scientific = TRUE)))+
-          geom_hline(yintercept=1, color = "red", size=0.5)
+          scale_y_continuous(name="Uniqueness Statistic - normalized", 
+                             sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k - normalized", 
+                                                 labels = function(x) format(x, scientific = TRUE)))
+          #geom_hline(yintercept=1, color = "red", size=0.5)
+  
+  return (plot)
+}
+
+make_uniqueness_plot_across_groups_second_derivative <- function(group_df) {
+  # Determine the coefficient used for scaling second axis
+  coeff <- max(group_df$delta_frac_norm)/max(group_df$unique_stat_dd, na.rm=T)
+  
+  # Make the plot
+  graph_title <- paste("Second derivative of uniqueness statistic across all", length(dataset_names),"datasets as k increases")
+  plot <- ggplot(group_df, aes(x=k)) + 
+    geom_line(aes(y=unique_stat_dd), color="dodgerblue") +
+    geom_line(aes(y=delta_frac_norm/coeff), color="dodgerblue", linetype="dashed")+
+    #geom_point(aes(y=unique_stat), color="dodgerblue") +
+    #geom_point(aes(y=delta_frac/coeff), color="dodgerblue") +
+    theme_bw() +
+    theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
+          axis.title.x=element_text(size =14),
+          axis.title.y=element_text(size=14),
+          legend.position = "bottom", 
+          legend.text=element_text(size=10),
+          legend.box="vertical",
+          legend.title=element_text(size=10),
+          axis.text=element_text(size=14, color="black")) +
+    labs(x="Kmer Length (k)",
+         y="Uniqueness Statistic''",
+         title=graph_title) +
+    scale_x_continuous(breaks=seq(0, 100, 5)) +
+    scale_y_continuous(name="Uniqueness Statistic'' - normalized", 
+                       sec.axis = sec_axis(~.*coeff, name="Kmer Cardinality/k - normalized", 
+                                           labels = function(x) format(x, scientific = TRUE)))
+    #geom_hline(yintercept=1, color = "red", size=0.5)
   
   return (plot)
 }
@@ -178,6 +249,35 @@ output_name <- paste(working_dir, "within_dataset_unique_stat.png", sep="")
 ggsave(output_name, plot=curr_plot, dpi=800, device="jpeg", width=9, height=6)
 
 
+# Take the second derivative of the uniqueness statistic for each group
+i <- 1
+frame_list = list()
+
+for (dataset_num in unique(within_df$group_num)) {
+  within_df_subset <- subset(within_df, within_df$group_num == dataset_num,
+                             select=c("group_num", "k", "unique_stat", "unique_stat_norm", "delta_frac", "delta_frac_norm"))
+  
+  # Get 2nd derivative, remove negative ones, and normalize
+  ddpoints <- diff(diff(within_df_subset$unique_stat))
+  ddpoints <- replace(ddpoints, which(ddpoints < 0), NA)
+  ddpoints <- ddpoints/max(ddpoints, na.rm=T)
+  
+  # Append to the subset dataframe, and store it
+  ddpoints <- append(NA, ddpoints)
+  within_df_subset$unique_stat_dd <- append(ddpoints, NA)
+  
+  # Save the dataframe
+  frame_list[[i]] <- within_df_subset
+  i <- i+1
+}
+
+within_df_2nd_der = do.call(rbind, frame_list)
+
+curr_plot <- make_uniqueness_plot_second_derivative(within_df_2nd_der)
+output_name <- paste(working_dir, "within_dataset_unique_stat_second_derivative.png", sep="")
+ggsave(output_name, plot=curr_plot, dpi=800, device="jpeg", width=9, height=6)
+
+
 ## SECTION 2 - Looking at data regarding across groups
 across_df <- read.csv(across_groups_data_path, header=TRUE)
 
@@ -190,3 +290,31 @@ ggsave(output_name, plot=curr_plot, dpi=800, device="jpeg", width=8, height=7)
 curr_plot <- make_uniqueness_plot_across_groups(across_df)
 output_name <- paste(working_dir, "across_dataset_unique_stat.png", sep="")
 ggsave(output_name, plot=curr_plot, dpi=800, device="jpeg", width=7, height=6)
+
+# Lets compute the second derivative of the uniqueness statistic
+i <- 1
+frame_list = list()
+
+for (dataset_num in unique(across_df$group_num)) {
+  across_df_subset <- subset(across_df, across_df$group_num == dataset_num,
+                             select=c("group_num", "k", "unique_stat", "unique_stat_norm", "delta_frac", "delta_frac_norm"))
+  
+  # Get 2nd derivative, remove negative ones, and normalize
+  ddpoints <- diff(diff(across_df_subset$unique_stat))
+  ddpoints <- replace(ddpoints, which(ddpoints < 0), NA)
+  ddpoints <- ddpoints/max(ddpoints, na.rm=T)
+  
+  # Append to the subset dataframe, and store it
+  ddpoints <- append(NA, ddpoints)
+  across_df_subset$unique_stat_dd <- append(ddpoints, NA)
+  
+  # Save the dataframe
+  frame_list[[i]] <- across_df_subset
+  i <- i+1
+}
+
+across_df_2nd_der = do.call(rbind, frame_list)
+
+curr_plot <- make_uniqueness_plot_across_groups_second_derivative(across_df_2nd_der)
+output_name <- paste(working_dir, "across_dataset_unique_stat_second_derivative.png", sep="")
+ggsave(output_name, plot=curr_plot, dpi=800, device="jpeg", width=9, height=6)
