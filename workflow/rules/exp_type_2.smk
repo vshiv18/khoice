@@ -157,7 +157,7 @@ def get_across_group_histogram_files(wildcards):
                 input_files.append(f"across_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt")
     return input_files
 
-def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, across_group_analysis):
+def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, across_group_analysis, k):
     """ 
         Takes in histogram of kmer occurrences, and returns the metrics for the 
         bar charts summarized below:
@@ -173,7 +173,7 @@ def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, 
     assert sum(sub_counts[1:]) == 0, "all of kmers in sub_counts should be unique"
 
     # Start to calculate the metrics ...
-    metrics = [0, 0, 0, 0, 0]
+    metrics = [0 for i in range(7)]
     total_unique_kmers = sum(sub_counts) + sum(inter_counts)
 
     boundaries = [0.25, 0.75]
@@ -188,12 +188,20 @@ def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, 
     metrics[2] = round(sum([inter_counts[i] for i in range(boundary_indices[0], boundary_indices[1])])/total_unique_kmers, 3)
     metrics[3] = round(sum([inter_counts[i] for i in range(boundary_indices[1], len(inter_counts))])/total_unique_kmers, 3)
 
+    rounding_error = abs(sum(metrics[0:4])-1) 
+    assert rounding_error < 0.05, "Issue occurred with histogram summarization"
+
+    # Both unnormalized, and normalized uniqueness statistic
     metrics[4] = (1 * sub_counts[0]/total_unique_kmers)
     metrics[4] += sum([((i+1) * (inter_counts[i]/total_unique_kmers)) for i in range(1, len(inter_counts))])
     metrics[4] = round(metrics[4], 4)
 
-    rounding_error = abs(sum(metrics[0:4])-1) 
-    assert rounding_error < 0.05, "Issue occurred with histogram summarization"
+    metrics[5] = ((1/num_genomes_in_dataset) * sub_counts[0]/total_unique_kmers)
+    metrics[5] += sum([(((i+1)/num_genomes_in_dataset) * (inter_counts[i]/total_unique_kmers)) for i in range(1, len(inter_counts))])
+    metrics[5] = round(metrics[5], 4)
+
+    # Calculate the fraction used by the delta measure
+    metrics[6] = round(total_unique_kmers/k, 4)
     return metrics
 
 
@@ -319,7 +327,9 @@ rule within_group_analysis_exp_type2:
         "within_dataset_analysis/within_dataset_analysis.csv"
     run:
         with open(output[0], "w") as output_fd:
-            output_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,unique_stat\n")
+            output_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,"
+                             "unique_stat,unique_stat_norm,delta_frac,delta_frac_norm\n")
+            all_metrics = []
             for i in range(0, len(input), 2):
                 dataset_num = input[i].split("/")[2].split("_")[1]
                 k_value = input[i].split("/")[1].split("_")[1]
@@ -333,10 +343,24 @@ rule within_group_analysis_exp_type2:
                     inter_results = inter_fd.readlines()
                     inter_counts = [int(record.split()[1]) for record in inter_results]
                 
-                metrics = summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, False)
-                metrics_str = ",".join([str(x) for x in metrics])
+                metrics = [f"group_{dataset_num}", k_value] + summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, False, int(k_value))
+                all_metrics.append(metrics)
 
-                output_fd.write(f"group_{dataset_num},{k_value},{metrics_str}\n")
+            # Generate the normalized cardinality/k values for each group
+            for i in range(1, num_datasets+1):
+                id_str = f"group_{i}"
+                values = [metrics[8] for metrics in all_metrics if metrics[0] == id_str]
+                max_ratio = max(values)
+
+                # Divide all the values in that group with the max value
+                for metrics in all_metrics:
+                    if metrics[0] == id_str:
+                        metrics.append(round(metrics[8]/max_ratio, 4))
+            
+            # Print all the values to csv file
+            for metrics in all_metrics:
+                metrics_str = ",".join([str(x) for x in metrics])
+                output_fd.write(f"{metrics_str}\n")
 
 
 # Section 3.6: Transform each rest_of_set datbase into counts of 1
@@ -419,7 +443,10 @@ rule across_group_analysis_exp_type2:
         "across_dataset_analysis/across_dataset_analysis.csv"
     run:
         with open(output[0], "w") as output_fd:
-            output_fd.write(f"group_num,k,percent_1_occ,percent_2_to_3,percent_4_to_8,percent_9_more,unique_stat\n")
+            output_fd.write(f"group_num,k,percent_1_occ,percent_2_to_3,percent_4_to_8,percent_9_more," 
+                             "unique_stat,unique_stat_norm,delta_frac,delta_frac_norm\n")
+            
+            all_metrics = []
             for i in range(0, len(input), 2):
                 dataset_num = input[i].split("/")[2].split("_")[1]
                 k_value = input[i].split("/")[1].split("_")[1]
@@ -431,7 +458,22 @@ rule across_group_analysis_exp_type2:
                     inter_results = inter_fd.readlines()
                     inter_counts = [int(record.split()[1]) for record in inter_results]
                 
-                metrics = summarize_histogram_type2(sub_counts, inter_counts, num_datasets, True)
-                metrics_str = ",".join([str(x) for x in metrics])
+                metrics = [f"group_{dataset_num}", k_value] + summarize_histogram_type2(sub_counts, inter_counts, num_datasets, True, int(k_value))
+                all_metrics.append(metrics)
 
-                output_fd.write(f"group_{dataset_num},{k_value},{metrics_str}\n")
+            # Generate the normalized cardinality/k values for each group
+            for i in range(1, num_datasets+1):
+                id_str = f"group_{i}"
+                values = [metrics[8] for metrics in all_metrics if metrics[0] == id_str]
+                max_ratio = max(values)
+
+                # Divide all the values in that group with the max value
+                for metrics in all_metrics:
+                    if metrics[0] == id_str:
+                        metrics.append(round(metrics[8]/max_ratio, 4))
+            
+            # Print all the values to csv file
+            for metrics in all_metrics:
+                metrics_str = ",".join([str(x) for x in metrics])
+                output_fd.write(f"{metrics_str}\n")
+
