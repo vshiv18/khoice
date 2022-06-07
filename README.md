@@ -29,7 +29,7 @@ Then, species can be requested either through file input where you specify a pat
 
 ## Running Experiments
 
-Now that we have data downloaded in our specified output directory, we can start to run the workflow to gather the data we need for our experiments. Currently, the workflow relies on the [KMC3: kmer-couunter](https://github.com/refresh-bio/KMC) to perform the kmer set operations and manipulations.
+Now that we have data downloaded in our specified output directory, we can start to run the workflow to gather the data we need for our experiments. Currently, the workflow relies on the [KMC3: kmer-counter](https://github.com/refresh-bio/KMC) to perform the kmer set operations and manipulations.
 
 ```sh
 conda activate khoice_exps
