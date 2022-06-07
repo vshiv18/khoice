@@ -35,14 +35,5 @@ include: "rules/exp_type_3.smk"
 
 rule all:
     input:
-        "final_results_type1/within_datasets_analysis.csv",
-        "final_results_type1/across_datasets_analysis.csv"
-
-
-
-
-
-
-
-
-
+        "within_dataset_analysis/within_dataset_analysis.csv",
+        "across_dataset_analysis/across_dataset_analysis.csv"
