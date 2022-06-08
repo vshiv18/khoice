@@ -1,5 +1,5 @@
-DATA_ROOT: "/home/oahmed6/scr16_blangme2/oahmed/khoice_exps/type_2/exp_1c"
-NUM_DATASETS: 8
-EXP_TYPE: 2
+DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/exp1"
+NUM_DATASETS: 2
+EXP_TYPE: 1
 PBSIM_MODEL: "/home/oahmed6/pbsim2/data/R95.model"
 READS_PER_DATASET: 10000
