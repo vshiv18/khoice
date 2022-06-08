@@ -1,4 +1,4 @@
-==#####################################################
+#####################################################
 # Name: kmer_plots_type1.R
 # Description: Generates stacked bar charts using
 #              results produced by the snakemake
