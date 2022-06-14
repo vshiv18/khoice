@@ -63,7 +63,7 @@ if exp_type == 4:
             for data_file in os.listdir(f"input_type4/rest_of_set/dataset_{num}"):
                 if data_file.endswith(".fna.gz"):
                     base_name = data_file.split(".fna.gz")[0]
-                    kmc_input_files.append(f"step_1_type4/rest_of_set/k_{k}/dataset_{num}/{base_name}")
+                    kmc_input_files.append(f"genome_sets/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
             
             if not os.path.isdir(f"complex_ops/k_{k}/dataset_{num}/"):
                 os.mkdir(f"complex_ops/k_{k}/dataset_{num}/")
@@ -76,7 +76,7 @@ if exp_type == 4:
                     result_str += "set{} + ".format(i+1)
                 result_str = result_str[:-2] + ")"
                 fd.write("OUTPUT:\n")
-                fd.write(f"unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.combined = {result_str}\n")
+                fd.write(f"unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
         
             
@@ -92,7 +92,7 @@ def get_all_genomes_in_dataset(wildcards):
     for data_file in os.listdir(f"input_type4/rest_of_set/dataset_{wildcards.num}/"):
         if data_file.endswith(".fna.gz"):
             file_name = data_file.split(".fna.gz")[0]
-            input_files.append(f"step_1_type4/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.kmc_pre")
+            input_files.append(f"genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
     return input_files
 
 ####################################################
@@ -120,29 +120,63 @@ rule build_kmc_database_on_pivot_exp_type_4:
     shell:
         "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1_type4/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} tmp/"
 
-# Section 3.2: Takes all genomes within a dataset
+# Section 3.2: Converts each kmer database into 
+# a set (multiplicity=1) for all databases.
+
+rule transform_genome_to_set_exp_type_4:
+    input:
+        "step_1_type4/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
+        "step_1_type4/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
+    output:
+        "genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_pre",
+        "genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_suf"
+    shell:
+        """
+        kmc_tools transform step_1_type4/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} \
+        set_counts 1 genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed
+        """
+
+# Section 3.3: Takes all genomes within a dataset
 # OTHER THAN the pivot, and then unions them together.
+# Creates histogram
 
 rule rest_of_set_union_exp_type_4:
     input:
         get_all_genomes_in_dataset
     output:
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.combined.kmc_pre",
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.combined.kmc_suf"
+        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     shell:
         "kmc_tools complex complex_ops/k_{wildcards.k}/dataset_{wildcards.num}/ops_{wildcards.num}.txt"
 
 rule union_histogram_exp_type_4:
     input:
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.combined.kmc_pre",
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.combined.kmc_suf"
+        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     output:
         "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.hist.txt"
     shell:
         """
         kmc_tools transform \
-        unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.combined \
+        unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
         histogram unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.hist.txt \
         """
 
+rule transform_union_to_set_exp_type4:
+    input: 
+        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+    output:
+        "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre",
+        "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_suf"
+    shell:
+     """
+        kmc_tools transform unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
+        set_counts 1 genome_sets/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed
+     """
 
+# Section 3.4: Performs intersection
+rule pivot_intersect_exp_type4:
+    input:
+        "step_1_type4/pivot/k_{k}/dataset_{num}/pivot_{num}"
+    output:
