@@ -14,11 +14,11 @@ library(data.table)
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 ########################################################################
-within_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_2a/within_dataset_analysis.csv"
-across_groups_data_path <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_2a/across_dataset_analysis.csv"
+within_groups_data_path <- "/Users/mwche/Downloads/exp2_files/within_dataset_analysis.csv"
+across_groups_data_path <- "/Users/mwche/Downloads/exp2_files/across_dataset_analysis.csv"
 
-dataset_names <- c("Escherichia coli", "Escherichia marmotae", "Escherichia albertii", "Escherichia fergusonii")
-working_dir <- "/Users/omarahmed/Downloads/current_research/khoice_exps/type_2/exp_2a/"
+dataset_names <- c("Escherichia coli", "Salmonella")
+working_dir <- "/Users/mwche/Downloads/exp2_files/"
 
 ########################################################################
 # Methods for generating the two types of plots: within groups, and 

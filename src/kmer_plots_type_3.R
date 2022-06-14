@@ -13,11 +13,11 @@ library(data.table)
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 ########################################################################
-data_path <- "/Users/omarahmed/Downloads/final_analysis_type3.csv"
+data_path <- "/Users/mwche/Downloads/exp3_files/final_analysis_type3.csv"
 
 dataset_names <- c("Escherichia coli","Salmonella enterica")
 seq_names <- c("Illumina", "ONT")
-working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/type_3/exp_1/"
+working_dir <- "/Users/mwche/Downloads/exp3_files/"
 
 ########################################################################
 # Methods for generating the grouped bar chart
@@ -70,3 +70,4 @@ for (seq_type in unique(all_data_df$read_type)) {
   }
   seq_pos <- seq_pos + 1
 }
+
