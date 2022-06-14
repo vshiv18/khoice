@@ -32,8 +32,9 @@ workdir: config["DATA_ROOT"]
 include: "rules/exp_type_1.smk"
 include: "rules/exp_type_2.smk"
 include: "rules/exp_type_3.smk"
+include: "rules/exp_type_4.smk"
 
-rule all:
-    input:
-        "within_dataset_analysis/within_dataset_analysis.csv",
-        "across_dataset_analysis/across_dataset_analysis.csv"
+#rule all:
+#    input:
+#        "within_dataset_analysis/within_dataset_analysis.csv",
+#        "across_dataset_analysis/across_dataset_analysis.csv"
