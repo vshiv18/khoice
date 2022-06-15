@@ -21,6 +21,7 @@ def main(args):
         pivot_files = [x.strip() for x in input_fd.readlines()]
     with open(args.intersect_list, "r") as input_fd:
         intersect_files = [x.strip() for x in input_fd.readlines()]
+
     # Verify each of the files in the file_lists is valid
     for file_path in (pivot_files + intersect_files):
         if not os.path.isfile(file_path):
@@ -39,9 +40,12 @@ def main(args):
         # Build dictionary of kmers with counts
         curr_pivot_dict = build_dictionary(curr_pivot_file)
         curr_intersect_num = 0
-        for curr_intersect_file in intersect_files:
+        # Read intersect files and create list of intersects for this pivot
+        curr_pivot_intersect = read_pivot_filelist(intersect_files, curr_pivot_num)
+        for curr_intersect_file in curr_pivot_intersect:
+            print(curr_intersect_file)
             # Update dictionary with intersect num
-            curr_pivot_dict = update_dictionary(curr_pivot_dict,curr_intersect_file, curr_intersect_num, len(pivot_files))
+            curr_pivot_dict = update_dictionary(curr_pivot_dict,curr_intersect_file, curr_intersect_num, num_datasets)
             curr_intersect_num += 1 # might to be last line of inner for-loop
 
         # print("Pivot ", curr_pivot_num," dictionary:\n")
@@ -54,10 +58,14 @@ def main(args):
             for match in matches:
                 confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
         curr_pivot_num += 1 # might to be last line of for-loop
+    print(confusion_matrix)
     
     # Print out confusion matrix to a csv file
-    matrix_csv = '/home/ext-mcheng29/test_matrix.csv'
-    with open(matrix_csv,"w+") as csvfile:
+    output_matrix = args.output_csv
+    if not os.path.isfile(output_matrix):
+            print(f"Error: Output csv is not valid ({output_matrix})")
+            exit(1)
+    with open(output_matrix,"w+") as csvfile:
         writer = csv.writer(csvfile)
         for row in confusion_matrix:
             writer.writerow(row)
@@ -69,6 +77,7 @@ def parse_arguments():
     parser.add_argument("-n", "--num", dest="num_datasets", required=True, help="number of datasets in this experiment", type=int)
     parser.add_argument("-p", "--pivot_list", dest="pivot_filelist", required=True, help="path to text file with a list of pivot kmer lists")
     parser.add_argument("-i", "--intersect_list", dest="intersect_list", required=True, help="path to text file with a list of kmer lists representing the intersections")
+    parser.add_argument("-o", "--output_csv", dest = "output_csv", required=True, help = "path to output csv file")
     args = parser.parse_args()
     return args
 
@@ -92,7 +101,15 @@ def build_dictionary(pivot_path):
             dict[kmer] = [int(count)]
     return dict
 
+def read_pivot_filelist(filelist, pivot_num):
+    """ Returns list of intersect files for this pivot """
+    pivot_intersects = []
+    with open(filelist[pivot_num], "r") as input_fd:
+        pivot_intersects = [x.strip() for x in input_fd.readlines()]
+    return pivot_intersects
+
 def update_dictionary(pivot_dict, intersect_path, intersect_num, num_datasets):
+    """ Updates dictionary with intersect kmers """
     with open(intersect_path, 'r') as fp:
         lines = fp.readlines()
         for line in lines:
