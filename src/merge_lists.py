@@ -7,7 +7,9 @@
 # Date: June 14th, 2022
 
 import argparse
+from calendar import c
 import os
+import csv
 
 def main(args):
     """ main method for the script """
@@ -19,11 +21,11 @@ def main(args):
         pivot_files = [x.strip() for x in input_fd.readlines()]
     with open(args.intersect_list, "r") as input_fd:
         intersect_files = [x.strip() for x in input_fd.readlines()]
-
     # Verify each of the files in the file_lists is valid
     for file_path in (pivot_files + intersect_files):
         if not os.path.isfile(file_path):
             print(f"Error: At least one of the file paths in the file lists is not valid ({file_path})")
+            exit(1)
 
     print("[log] all file paths are valid, now will start to merge the lists.")
 
@@ -34,32 +36,31 @@ def main(args):
     # Fill in the confusion matrix from the upper-left to bottom right
     curr_pivot_num = 0
     for curr_pivot_file in pivot_files:
-
-        ################################################################################
-        # TODO - Build a dictionary holding the kmers and counts for the current pivot
-        # You can insert a method here to keep the main method nice and consice
-        ################################################################################
-
+        # Build dictionary of kmers with counts
+        curr_pivot_dict = build_dictionary(curr_pivot_file)
         curr_intersect_num = 0
         for curr_intersect_file in intersect_files:
-
-            ##############################################################################
-            # TODO - Go though all the kmers in the intersect, and update the dictionary
-            # This can be a method as well if you want.
-            ##############################################################################
-
+            # Update dictionary with intersect num
+            curr_pivot_dict = update_dictionary(curr_pivot_dict,curr_intersect_file, curr_intersect_num, len(pivot_files))
             curr_intersect_num += 1 # might to be last line of inner for-loop
 
-        # Fill in the current row of the confusion matrix
+        # print("Pivot ", curr_pivot_num," dictionary:\n")
+        # print(curr_pivot_dict)
         
-        ############################################################
-        # TODO: Take the kmer counts, and datasets they occur in
-        #       and fill in the confusion matrix.
-        ############################################################
-
+        # Fill in the current row of the confusion matrix
+        for kmer in curr_pivot_dict:
+            count = curr_pivot_dict[kmer][0]
+            matches = curr_pivot_dict[kmer][1:]
+            for match in matches:
+                confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
         curr_pivot_num += 1 # might to be last line of for-loop
     
-    # Print out your confusion matrix to a csv file
+    # Print out confusion matrix to a csv file
+    matrix_csv = '/home/ext-mcheng29/test_matrix.csv'
+    with open(matrix_csv,"w+") as csvfile:
+        writer = csv.writer(csvfile)
+        for row in confusion_matrix:
+            writer.writerow(row)
 
 def parse_arguments():
     """ Defines the command-line argument parser, and return arguments """
@@ -79,6 +80,26 @@ def check_arguments(args):
     if args.num_datasets <= 0:
         print("Error: The number of datasets needs to be positive integer.")
         exit(1)
+
+def build_dictionary(pivot_path):
+    """ Builds dictionary of pivot kmers with dict[0] as count """
+    dict = {}
+    with open(pivot_path, 'r') as fp:
+        lines = fp.readlines()
+        for line in lines:
+            kmer = line.split(" ")[0]
+            count = line.split(" ")[1].split("\n")[0]
+            dict[kmer] = [int(count)]
+    return dict
+
+def update_dictionary(pivot_dict, intersect_path, intersect_num, num_datasets):
+    with open(intersect_path, 'r') as fp:
+        lines = fp.readlines()
+        for line in lines:
+            kmer = line.split(" ")[0]
+            if(kmer in pivot_dict):
+                pivot_dict[kmer].append(intersect_num % num_datasets)
+    return pivot_dict
 
 if __name__ == "__main__":
     args = parse_arguments()
