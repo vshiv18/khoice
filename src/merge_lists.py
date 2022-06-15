@@ -43,10 +43,10 @@ def main(args):
         # Read intersect files and create list of intersects for this pivot
         curr_pivot_intersect = read_pivot_filelist(intersect_files, curr_pivot_num)
         for curr_intersect_file in curr_pivot_intersect:
-            print(curr_intersect_file)
             # Update dictionary with intersect num
             curr_pivot_dict = update_dictionary(curr_pivot_dict,curr_intersect_file, curr_intersect_num, num_datasets)
             curr_intersect_num += 1 # might to be last line of inner for-loop
+            
 
         # print("Pivot ", curr_pivot_num," dictionary:\n")
         # print(curr_pivot_dict)
@@ -62,9 +62,6 @@ def main(args):
     
     # Print out confusion matrix to a csv file
     output_matrix = args.output_csv
-    if not os.path.isfile(output_matrix):
-            print(f"Error: Output csv is not valid ({output_matrix})")
-            exit(1)
     with open(output_matrix,"w+") as csvfile:
         writer = csv.writer(csvfile)
         for row in confusion_matrix:
@@ -83,7 +80,7 @@ def parse_arguments():
 
 def check_arguments(args):
     """ Checks the arguments to make sure they are valid """
-    if not os.path.isfile(args.pivot_filelist) or not os.path.isfile(args.intersect_list):
+    if not os.path.isfile(args.pivot_filelist) or not os.path.isfile(args.intersect_list) or not os.path.isfile(args.output_csv):
         print("Error: One of the provided files is not valid.")
         exit(1)
     if args.num_datasets <= 0:
