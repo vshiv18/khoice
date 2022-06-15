@@ -178,5 +178,55 @@ rule transform_union_to_set_exp_type4:
 # Section 3.4: Performs intersection
 rule pivot_intersect_exp_type4:
     input:
-        "step_1_type4/pivot/k_{k}/dataset_{num}/pivot_{num}"
+        "step_1_type4/pivot/k_{k}/dataset_{pivot_num}/pivot_{pivot_num}.kmc_pre",
+        "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre"
     output:
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
+    shell:
+        """
+        kmc_tools simple genome_sets/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed \
+        step_1_type4/pivot/k_{wildcards.k}/dataset_{wildcards.pivot_num}/pivot_{wildcards.pivot_num} intersect \
+        intersection_results/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} -ocsum
+        """
+
+rule intersection_histogram_exp_type4:
+    input:
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
+    output:
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.hist.txt"
+    shell:
+        """
+        kmc_tools transform \
+        intersection_results/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
+        histogram intersection_results/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.hist.txt\
+        """
+
+# Section 3.5 Generates text dump of pivot and intersection
+
+rule pivot_text_dump_exp_type4:
+    input:
+        "step_1_type4/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_pre",
+        "step_1_type4/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_suf"
+    output:
+        "text_dump/k_{k}/pivot/pivot_{num}.txt"
+    shell: 
+        """
+        kmc_tools transform \
+        step_1_type4/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} \
+        dump -s text_dump/k_{wildcards.k}/pivot/pivot_{wildcards.num}.txt \
+        """
+
+rule intersection_text_dump_exp_type4:
+    input:
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
+        "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
+    output:
+        "text_dump/k_{k}/intersection/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.txt"
+    shell:
+        """
+        kmc_tools transform \
+        intersection_results/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
+        dump -s text_dump/k_{wildcards.k}/intersection/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.txt
+        """
