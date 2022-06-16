@@ -52,7 +52,7 @@ if exp_type == 4:
     if not os.path.isdir("complex_ops"):
         os.makedirs("complex_ops")
 
-    # Build the complex ops files *
+    # Build the complex ops files
     for k in k_values:
         if not os.path.isdir(f"complex_ops/k_{k}"):
             os.mkdir(f"complex_ops/k_{k}")
@@ -78,8 +78,29 @@ if exp_type == 4:
                 fd.write("OUTPUT:\n")
                 fd.write(f"unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
-        
-            
+
+    # Create filelists
+    for k in k_values:
+        if not os.path.isdir(f"filelists/k_{k}"):
+            os.mkdir(f"filelists/k_{k}")
+        intersect_files = []
+        pivot_files = []
+        for pivot in range(1, num_datasets+1):
+            pivot_files.append("/text_dump/k_{k}/pivot/pivot_{pivot}.txt".format(k = k, pivot = pivot))
+            for num in range(1, num_datasets+1):
+                intersect_files.append("/text_dump/k_{k}/intersection/pivot_{pivot}/pivot_{pivot}_intersect_dataset_{num}.txt".format(k = k, pivot = pivot, num = num))
+        with open(f"filelists/k_{k}/pivots_filelist.txt", "w") as fd:
+            for f in pivot_files:
+                fd.write(base_dir+f+"\n")
+        with open(f"filelists/k_{k}/intersections_filelist.txt", "w") as fd:
+            for f in intersect_files:
+                fd.write(base_dir+f+"\n")
+
+    # Declare confusion matrix and accuracy files
+    if not os.path.isdir("accuracies"):
+        os.makedirs("accuracies/confusion_matrix")
+        os.makedirs("accuracies/accuracy")
+    
 
 ####################################################
 # Section 2: Helper functions needed for these
@@ -230,3 +251,25 @@ rule intersection_text_dump_exp_type4:
         intersection_results/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
         dump -s text_dump/k_{wildcards.k}/intersection/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.txt
         """
+
+# Section 3.7 Merge List Python
+# Outputs 1 row accuracy csv
+rule run_merge_list_exp_type4:
+    input:
+        "filelists/k_{k}/intersections_filelist.txt",
+        "filelists/k_{k}/pivots_filelist.txt"
+    output:
+        "accuracies/accuracy/k_{k}_accuracy.csv",
+        "accuracies/confusion_matrix/k_{k}_confusion_matrix.csv"
+    shell:
+        """
+        python3 {repo_dir}/src/merge_lists.py \
+        -p {base_dir}/filelists/k_{wildcards.k}/pivots_filelist.txt \
+        -i {base_dir}/filelists/k_{wildcards.k}/intersections_filelist.txt \
+        -o {base_dir}/accuracies/ \
+        -n {num_datasets} \
+        -k {wildcards.k} \
+        """
+
+# Section 3.8 Concatonate 
+# Outputs 1 full accuracy csv

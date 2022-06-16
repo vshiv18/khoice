@@ -1,4 +1,5 @@
 DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/exp4"
+REPO_DIRECTORY: "/home/ext-mcheng29/khoice"
 NUM_DATASETS: 2
 EXP_TYPE: 4
 PBSIM_MODEL: "/home/ext-mcheng29/pbsim2/data/R95.model"
