@@ -40,7 +40,7 @@ def main(args):
     curr_pivot_num = 0
     curr_intersect_num = 0
     for curr_pivot_file in pivot_files:
-        print("[log] processing pivot {pivot}".format(pivot = curr_pivot_num + 1))
+        print("[log] processing pivot {pivot} with k = {k}".format(pivot = curr_pivot_num + 1, k = args.k))
         # Build dictionary of kmers with counts
         curr_pivot_dict = build_dictionary(curr_pivot_file)
         for i in range(num_datasets):
@@ -79,7 +79,6 @@ def main(args):
     with open(output_acc, "w+") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(accuracies)
-    print(accuracies)
 
 
 

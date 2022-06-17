@@ -1,4 +1,4 @@
-DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/exp4"
+DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/exp4_salmonella_ecoli"
 REPO_DIRECTORY: "/home/ext-mcheng29/khoice"
 NUM_DATASETS: 2
 EXP_TYPE: 4

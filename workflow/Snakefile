@@ -41,3 +41,7 @@ include: "rules/exp_type_4.smk"
 #    input:
 #        "within_dataset_analysis/within_dataset_analysis.csv",
 #        "across_dataset_analysis/across_dataset_analysis.csv"
+
+rule all:
+    input:
+        "accuracies/accuracy_scores.csv"
