@@ -1,7 +1,7 @@
 ####################################################
 # Name: exp_type_4.smk
 # Description: Contains functions and rules for
-#              the type of experiment type 3: 
+#              the type of experiment type 4: 
 # Date: 6/14/22
 ####################################################
 

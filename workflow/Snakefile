@@ -36,12 +36,15 @@ include: "rules/exp_type_1.smk"
 include: "rules/exp_type_2.smk"
 include: "rules/exp_type_3.smk"
 include: "rules/exp_type_4.smk"
+include: "rules/exp_type_5.smk"
 
+# Rule all for exp 2 and 3
 #rule all:
 #    input:
 #        "within_dataset_analysis/within_dataset_analysis.csv",
 #        "across_dataset_analysis/across_dataset_analysis.csv"
 
-rule all:
-    input:
-        "accuracies/accuracy_scores.csv"
+# Rule all for exp 4
+#rule all:
+#    input:
+#        "accuracies/accuracy_scores.csv"
