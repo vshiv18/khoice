@@ -41,6 +41,7 @@ def main(args):
             seq_count[1] += 1
     assert seq_count[0] == seq_count[1], "assertion failed: mismatch in the number of sequences in each file."
     
+
     # Start to extract the requested output (half-mems or mems) and output to stdout
     seq_id = 0
     curr_half_mem_id = 0
@@ -62,7 +63,16 @@ def main(args):
             curr_seq = ""
         elif not header_line:
             curr_seq += line.strip()
-    
+    # Deal with last sequence not picked up by header
+    if(len(curr_seq)>0):
+        lengths_array = [int(x) for x in length_lines[(seq_id*2)+1].split()]
+        assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
+        if args.half_mems: # deal with half-MEMs
+            curr_half_mem_id = print_out_half_mems(curr_seq, lengths_array, curr_half_mem_id, args.threshold, out_fd)
+        else: # deal with MEMs
+            raise NotImplementError()
+     
+
     pattern_fd.close()
     length_fd.close()
     out_fd.close()
