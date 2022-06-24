@@ -140,8 +140,8 @@ rule ref_ri_align_exp_5:
     shell:
         """
         cd {r_dir} 
-        ri-align locate {base_dir}/combined_type_5/combined_ref.fna {base_dir}/half_mems/pivot_{wildcards.num}.fastq \
-        > {base_dir}/sam/pivot_{wildcards.num}.sam
+        ri-align locate {base_dir}/combined_type_5/combined_ref.fna {base_dir}/half_mems/pivot_{wildcards.num}.fastq 
+        #> {base_dir}/sam/pivot_{wildcards.num}.sam
         """
 
 # Section 3.5: Generate List of Reference Genomes

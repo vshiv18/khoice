@@ -15,6 +15,11 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
     for i in range(len(curr_seq)):
         curr_half_mem_length = lengths_array[i]
         if curr_half_mem_length >= threshold:
+            
+            # Added by Omar - for debugging
+            #if curr_half_mem_length >= 20:
+            #    curr_half_mem_length = 20
+
             random_quality = "#" * curr_half_mem_length
             curr_half_mem = curr_seq[i:i+curr_half_mem_length]
 
