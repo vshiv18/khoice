@@ -43,7 +43,6 @@ if exp_type == 5:
 #            experiment rules.
 ####################################################
 
-
 def get_all_non_pivot_genomes():
     """ Returns list of all non-pivot genomes """
     input_files = []
@@ -63,6 +62,22 @@ def get_dataset_non_pivot_genomes(wildcards):
             input_files.append(f"non_pivot_type_5/dataset_{wildcards}/{file_name}.fna")
     return input_files
 
+def get_hm_python_input():
+    """ Returns list of text files with reference names for each dataset AND all pivot SAM files """
+    input_files = []
+    for i in range(1,num_datasets+1):
+        input_files.append(f"ref_lists_type_5/dataset_{i}_references.txt")
+        input_files.append(f"sam/hm_pivot_{i}.sam")
+    return input_files
+
+def get_m_python_input():
+    """ Returns list of text files with reference names for each dataset AND all pivot SAM files """
+    input_files = []
+    for i in range(1,num_datasets+1):
+        input_files.append(f"ref_lists_type_5/dataset_{i}_references.txt")
+        input_files.append(f"sam/m_pivot_{i}.sam")
+    return input_files
+
 ####################################################
 # Section 3: Rules needed for this experiment type
 ####################################################
@@ -73,19 +88,37 @@ rule concat_ref_exp_5:
     input:
         get_all_non_pivot_genomes()
     output:
-        "combined_type_5/combined_ref.fna"
+        "combined_type_5/combined_ref_forward.fna"
     shell:
-        "cat non_pivot_type_5/dataset_*/*_genomic.fna > combined_type_5/combined_ref.fna"
+        "cat {input} > {output}"
+
+rule build_rev_comp_exp_5:
+    input:
+        "combined_type_5/combined_ref_forward.fna"
+    output:
+        "combined_type_5/combined_ref_rcomp.fna"
+    shell:
+        "seqtk seq -r {input} | sed 's/^>/>revcomp_/' > {output}"
+
+rule concat_full_ref_exp_5:
+    input:
+        "combined_type_5/combined_ref_rcomp.fna",
+        "combined_type_5/combined_ref_forward.fna"
+    output:
+        "combined_type_5/combined_ref_all.fna"
+    shell:
+        "cat {input} > {output}"
+
 
 # Section 3.2: Generate matching statistics for pivot
 
 rule spumoni_build_exp_5:
     input:
-        "combined_type_5/combined_ref.fna"
+        "combined_type_5/combined_ref_all.fna"
     output:
         "combined_type_5/spumoni_full_ref.fa"
     shell:
-        "spumoni build -r combined_type_5/combined_ref.fna -M -n"
+        "spumoni build -r combined_type_5/combined_ref_all.fna -M -n"
 
 rule spumoni_run_exp_5:
     input:
@@ -99,9 +132,9 @@ rule spumoni_run_exp_5:
         -p pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna -M -n
         """
 
-# Section 3.3: Extract Half-Mems from pivot MS
+# Section 3.3: Extract Half-Mems and Mems from pivot MS
 
-rule run_extract_mems_exp_5:
+rule extract_half_mems_exp_5:
     input:
         "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna.lengths",
         "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna"
@@ -117,31 +150,64 @@ rule run_extract_mems_exp_5:
         -o {base_dir}/half_mems/pivot_{wildcards.num}.fastq
         """
 
-# Section 3.4: Create SAM file with located Half-Mems
+rule extract_mems_exp5:
+    input:
+        "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna.lengths",
+        "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna"
+    output:
+        "mems/pivot_{num}.fastq"
+    shell:
+        """
+        python3 {repo_dir}/src/extract_mems.py \
+        -l {base_dir}/pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna.lengths \
+        -p {base_dir}/pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna \
+        --mems \
+        -t {thresh} \
+        -o {base_dir}/mems/pivot_{wildcards.num}.fastq
+        """
+
+# Section 3.4: Build r-index
 
 rule ref_ri_build_fasta_exp_5:
     input:
-        "combined_type_5/combined_ref.fna"
+        "combined_type_5/combined_ref_all.fna"
     output:
-        "combined_type_5/combined_ref.fna.ri"
+        "combined_type_5/combined_ref_all.fna.ri"
     shell:
         """
         cd {r_dir} 
-        ri-buildfasta {base_dir}/combined_type_5/combined_ref.fna 
+        ri-buildfasta {base_dir}/combined_type_5/combined_ref_all.fna 
         cd {base_dir}
         """
 
-rule ref_ri_align_exp_5:
+# Section 3.4: Create SAM file with located Half-Mems
+
+rule ref_ri_align_half_mem_exp_5:
     input:
-        "combined_type_5/combined_ref.fna",
+        "combined_type_5/combined_ref_all.fna",
+        "combined_type_5/combined_ref_all.fna.ri",
         "half_mems/pivot_{num}.fastq"
     output:
-        "sam/pivot_{num}.sam"
+        "sam/hm_pivot_{num}.sam"
     shell:
         """
         cd {r_dir} 
-        ri-align locate {base_dir}/combined_type_5/combined_ref.fna {base_dir}/half_mems/pivot_{wildcards.num}.fastq 
-        #> {base_dir}/sam/pivot_{wildcards.num}.sam
+        ri-align locate {base_dir}/combined_type_5/combined_ref_all.fna {base_dir}/half_mems/pivot_{wildcards.num}.fastq \
+        > {base_dir}/sam/hm_pivot_{wildcards.num}.sam
+        """
+
+rule ref_ri_align_mem_exp_5:
+    input:
+        "combined_type_5/combined_ref_all.fna",
+        "combined_type_5/combined_ref_all.fna.ri",
+        "mems/pivot_{num}.fastq"
+    output:
+        "sam/m_pivot_{num}.sam"
+    shell:
+        """
+        cd {r_dir} 
+        ri-align locate {base_dir}/combined_type_5/combined_ref_all.fna {base_dir}/mems/pivot_{wildcards.num}.fastq \
+        > {base_dir}/sam/m_pivot_{wildcards.num}.sam
         """
 
 # Section 3.5: Generate List of Reference Genomes
@@ -156,4 +222,38 @@ rule gen_ref_list_exp_5:
         for file in {input}; do
             grep '^>' $file | awk '{{print substr($1,2)}}' >> "ref_lists_type_5/dataset_{wildcards.num}_references.txt"
         done
+        """
+
+# Section 3.6 
+
+rule analyze_half_mems_exp_5:
+    input:
+        get_hm_python_input()
+    output:
+        "output/hm_confusion_matrix.csv",
+        "output/hm_accuracies.csv"
+    shell:
+        """
+        python3 {repo_dir}/src/analyze_sam.py \
+        -n {num_datasets} \
+        -s {base_dir}/sam/ \
+        -r {base_dir}/ref_lists_type_5/ \
+        -o {base_dir}/output/ \
+        --half-mems
+        """
+
+rule analyze_mems_exp_5:
+    input:
+        get_m_python_input()
+    output:
+        "output/m_confusion_matrix.csv",
+        "output/m_accuracies.csv"
+    shell:
+        """
+        python3 {repo_dir}/src/analyze_sam.py \
+        -n {num_datasets} \
+        -s {base_dir}/sam/ \
+        -r {base_dir}/ref_lists_type_5/ \
+        -o {base_dir}/output/ \
+        --mems
         """

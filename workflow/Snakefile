@@ -34,11 +34,12 @@ workdir: config["DATA_ROOT"]
 # Imports rules for each type of experiment
 ###############################################################################
 
-include: "rules/exp_type_1.smk"
-include: "rules/exp_type_2.smk"
-include: "rules/exp_type_3.smk"
-include: "rules/exp_type_4.smk"
-include: "rules/exp_type_5.smk"
+#include: "rules/exp_type_1.smk"
+#include: "rules/exp_type_2.smk"
+#include: "rules/exp_type_3.smk"
+#include: "rules/exp_type_4.smk"
+#include: "rules/exp_type_5.smk"
+include: "rules/exp_type_6.smk"
 
 # Rule all for exp 2 and 3
 #rule all:

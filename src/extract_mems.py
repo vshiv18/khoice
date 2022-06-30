@@ -17,14 +17,45 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
         if curr_half_mem_length >= threshold:
             
             # Added by Omar - for debugging
-            #if curr_half_mem_length >= 20:
-            #    curr_half_mem_length = 20
+            if curr_half_mem_length >= 1000:
+                curr_half_mem_length = 1000
 
             random_quality = "#" * curr_half_mem_length
             curr_half_mem = curr_seq[i:i+curr_half_mem_length]
 
             out_file.write(f">half_mem_{curr_seq_id}\n{curr_half_mem}\n+\n{random_quality}\n")
             curr_seq_id += 1
+    return curr_seq_id
+
+def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
+    # Print first mem
+    curr_mem_length = lengths_array[0]
+
+    if curr_mem_length >= 1000:
+        curr_mem_length = 1000
+    random_quality = "#" * curr_mem_length
+    curr_mem = curr_seq[0:curr_mem_length]
+    out_file.write(f">mem_{curr_seq_id}\n{curr_mem}\n+\n{random_quality}\n")
+    curr_seq_id += 1
+    capped = 0
+
+    for i in range(1, len(curr_seq)):
+        #print(lengths_array[i])
+        prev_mem_length = lengths_array[i - 1]
+        curr_mem_length = lengths_array[i]
+        if curr_mem_length >= threshold:
+            # Take only maximal matches
+            if(curr_mem_length >= prev_mem_length):
+                write_mem_length = curr_mem_length
+                # Limit mem length for memory
+                if curr_mem_length >= 1000:
+                    write_mem_length = 1000
+                    capped +=1
+                random_quality = "#" * write_mem_length
+                curr_mem = curr_seq[i:i+write_mem_length]
+                out_file.write(f">mem_{curr_seq_id}\n{curr_mem}\n+\n{random_quality}\n")
+                curr_seq_id += 1
+    print(capped)
     return curr_seq_id
 
 def main(args):
@@ -49,7 +80,7 @@ def main(args):
 
     # Start to extract the requested output (half-mems or mems) and output to stdout
     seq_id = 0
-    curr_half_mem_id = 0
+    curr_id = 0
     curr_seq = ""
     for line in pattern_lines:
         header_line = ('>' in line)
@@ -60,10 +91,9 @@ def main(args):
             assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
 
             if args.half_mems: # deal with half-MEMs
-                curr_half_mem_id = print_out_half_mems(curr_seq, lengths_array, curr_half_mem_id, args.threshold, out_fd)
+                curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
             else: # deal with MEMs
-                raise NotImplementError()
-
+                curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
             seq_id += 1
             curr_seq = ""
         elif not header_line:
@@ -73,11 +103,10 @@ def main(args):
         lengths_array = [int(x) for x in length_lines[(seq_id*2)+1].split()]
         assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
         if args.half_mems: # deal with half-MEMs
-            curr_half_mem_id = print_out_half_mems(curr_seq, lengths_array, curr_half_mem_id, args.threshold, out_fd)
+            curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
         else: # deal with MEMs
-            raise NotImplementError()
+            curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
      
-
     pattern_fd.close()
     length_fd.close()
     out_fd.close()
