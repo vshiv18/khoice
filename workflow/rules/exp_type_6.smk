@@ -352,6 +352,11 @@ rule concatonate_accuracies_exp_type4:
     input:
         expand("accuracies/{read_type}/accuracy/k_{k}_accuracy.csv", k = k_values, read_type = {"illumina","ont"})
     output:
-        "accuracies/accuracy_scores.csv"
+        "accuracies/short_accuracy_scores.csv",
+        "accuracies/long_accuracy_scores.csv"
     shell:
-        "cat {input} > {output}"
+        """
+        cat accuracies/illumina/accuracy/k_*_accuracy.csv > accuracies/short_accuracy_scores.csv
+        cat accuracies/ont/accuracy/k_*_accuracy.csv > accuracies/long_accuracy_scores.csv
+        """
+        
