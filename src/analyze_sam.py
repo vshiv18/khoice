@@ -11,16 +11,13 @@ import argparse
 import csv
 import pysam
 
-lens = [0,0]
-nums = [0,0]
-
-
 def main(args):
+    
     # Set up confusion matrix and reference list
     confusion_matrix = [[0 for i in range(args.num_datasets)] for j in range(args.num_datasets)]
     refs_list = build_refs_list(args.ref_dir, args.num_datasets)
-
     for i in range(args.num_datasets):
+        
         # Selects individual sam file to build map of read matches
         if(args.half_mems):
             sam_file = pysam.AlignmentFile(args.sam_dir+"hm_pivot_{n}.sam".format(n = i + 1), "r")
@@ -32,19 +29,17 @@ def main(args):
 
         for read in sam_file.fetch():
             dataset = find_class_of_reference_name(refs_list, read.reference_name)
-            if read.query_name in read_mappings:
-                read_mappings[read.query_name].append(dataset)
-            else:
-                read_mappings[read.query_name] = [dataset]
+            if read.query_name not in read_mappings:   
+                read_mappings[read.query_name] = [int(read.query_name.split("_")[3])]
+            read_mappings[read.query_name].append(dataset)
         sam_file.close()
-
-        
-
         for key in read_mappings:
-            curr_set = set(read_mappings[key])
+            mem_len = read_mappings[key][0]
+            curr_set = set(read_mappings[key][1:])
             for dataset in curr_set:
-                confusion_matrix[i][dataset -1] += 1/len(curr_set) 
-
+                confusion_matrix[i][dataset -1] += 1/len(curr_set) * mem_len 
+        
+    
     # Create output file
     if(args.half_mems):
         output_matrix = args.output_dir + "hm_confusion_matrix.csv"

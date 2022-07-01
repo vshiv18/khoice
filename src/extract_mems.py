@@ -15,27 +15,27 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
     for i in range(len(curr_seq)):
         curr_half_mem_length = lengths_array[i]
         if curr_half_mem_length >= threshold:
-            
+            write_mem_length = curr_half_mem_length
             # Added by Omar - for debugging
             if curr_half_mem_length >= 1000:
-                curr_half_mem_length = 1000
+                write_mem_length = 1000
 
-            random_quality = "#" * curr_half_mem_length
-            curr_half_mem = curr_seq[i:i+curr_half_mem_length]
+            random_quality = "#" * write_mem_length
+            curr_half_mem = curr_seq[i:i+write_mem_length]
 
-            out_file.write(f">half_mem_{curr_seq_id}\n{curr_half_mem}\n+\n{random_quality}\n")
+            out_file.write(f">half_mem_{curr_seq_id}_length_{write_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
             curr_seq_id += 1
     return curr_seq_id
 
 def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
     # Print first mem
     curr_mem_length = lengths_array[0]
-
+    write_mem_length = curr_mem_length
     if curr_mem_length >= 1000:
-        curr_mem_length = 1000
-    random_quality = "#" * curr_mem_length
-    curr_mem = curr_seq[0:curr_mem_length]
-    out_file.write(f">mem_{curr_seq_id}\n{curr_mem}\n+\n{random_quality}\n")
+        write_mem_length = 1000
+    random_quality = "#" * write_mem_length
+    curr_mem = curr_seq[0:write_mem_length]
+    out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
     curr_seq_id += 1
     capped = 0
 
@@ -53,9 +53,8 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
                     capped +=1
                 random_quality = "#" * write_mem_length
                 curr_mem = curr_seq[i:i+write_mem_length]
-                out_file.write(f">mem_{curr_seq_id}\n{curr_mem}\n+\n{random_quality}\n")
+                out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
                 curr_seq_id += 1
-    print(capped)
     return curr_seq_id
 
 def main(args):
