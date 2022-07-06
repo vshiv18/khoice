@@ -12,17 +12,13 @@ import csv
 import pysam
 
 def main(args):
-    
     # Set up confusion matrix and reference list
     confusion_matrix = [[0 for i in range(args.num_datasets)] for j in range(args.num_datasets)]
     refs_list = build_refs_list(args.ref_dir, args.num_datasets)
     for i in range(args.num_datasets):
         
         # Selects individual sam file to build map of read matches
-        if(args.half_mems):
-            sam_file = pysam.AlignmentFile(args.sam_dir+"hm_pivot_{n}.sam".format(n = i + 1), "r")
-        else:
-            sam_file = pysam.AlignmentFile(args.sam_dir+"m_pivot_{n}.sam".format(n = i + 1), "r")
+        sam_file = pysam.AlignmentFile(args.sam_dir+"pivot_{n}.sam".format(n = i + 1), "r")
         
         print("\n[log] building a dictionary of the read alignments for pivot {n}".format(n = i + 1))
         read_mappings = {}
@@ -41,12 +37,8 @@ def main(args):
         
     
     # Create output file
-    if(args.half_mems):
-        output_matrix = args.output_dir + "hm_confusion_matrix.csv"
-        output_accuracies = args.output_dir + "hm_accuracies.csv"
-    else:
-        output_matrix = args.output_dir + "m_confusion_matrix.csv"
-        output_accuracies = args.output_dir + "m_accuracies.csv"
+    output_matrix = args.output_dir + "confusion_matrix.csv"
+    output_precision = args.output_dir + "precision.csv"
     
     # Write confusion matrix to output csv
     with open(output_matrix,"w+") as csvfile:
@@ -54,13 +46,15 @@ def main(args):
         for row in confusion_matrix:
             writer.writerow(row)
 
-    # Calculates accuracy and writes to output csv
-    accuracies = calculate_accuracy(confusion_matrix, args.num_datasets)
+    # Calculates precision and writes to output csv
+    precision = []
+    for pivot in range(args.num_datasets):
+        precision.append(confusion_matrix[pivot][pivot]/sum(confusion_matrix[pivot]))
+            
     
-    with open(output_accuracies,"w+") as csvfile:
+    with open(output_precision,"w+") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(accuracies)
-
+        writer.writerow(precision)
 
 def parse_arguments():
     """ Defines the command-line argument parser, and return arguments """
@@ -70,7 +64,7 @@ def parse_arguments():
     parser.add_argument("-s", "--sam_file", dest="sam_dir", required=True, help="path to directory with SAM files to be analyzed")
     parser.add_argument("-r", "--ref_lists", dest="ref_dir", required=True, help="path to directory with dataset reference lists")
     parser.add_argument("-o", "--output_path", dest = "output_dir", required=True, help="path to directory for output matrix and accuracies")
-    parser.add_argument("--half-mems", action="store_true", default=False, dest="half_mems", help="sam corresponds to half-mems")
+    parser.add_argument("--half_mems", action="store_true", default=False, dest="half_mems", help="sam corresponds to half-mems")
     parser.add_argument("--mems", action="store_true", default=False, dest="mems", help="sam corresponds to mems (it can either be mems or half-mems, not both)")
     args = parser.parse_args()
     return args
@@ -118,7 +112,7 @@ def find_class_of_reference_name(ref_list, ref_name):
         exit(1)
     return datasets[0]
 
-def calculate_accuracy(confusion_matrix, num_datasets):
+#def calculate_accuracy(confusion_matrix, num_datasets):
     """ Calculates accuracy score given confusion matrix """
     accuracies = []
     for pivot in range(num_datasets):
@@ -135,6 +129,7 @@ def calculate_accuracy(confusion_matrix, num_datasets):
                     tn += curr
         accuracies.append((tp + tn)/(tp + tn + fp + fn))
     return accuracies
+
 
 if __name__ == "__main__":
     args = parse_arguments()

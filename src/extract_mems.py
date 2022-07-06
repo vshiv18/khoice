@@ -23,7 +23,7 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
             random_quality = "#" * write_mem_length
             curr_half_mem = curr_seq[i:i+write_mem_length]
 
-            out_file.write(f">half_mem_{curr_seq_id}_length_{write_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
+            out_file.write(f">halfmem_{curr_seq_id}_length_{write_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
             curr_seq_id += 1
     return curr_seq_id
 
@@ -40,7 +40,6 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
     capped = 0
 
     for i in range(1, len(curr_seq)):
-        #print(lengths_array[i])
         prev_mem_length = lengths_array[i - 1]
         curr_mem_length = lengths_array[i]
         if curr_mem_length >= threshold:

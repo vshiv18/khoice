@@ -2,6 +2,11 @@
 # Name: exp_type_6.smk
 # Description: Contains functions and rules for
 #              the type of experiment type 6: 
+#
+#              Simulates reads from an out-pivot genome from
+#              each species. Then, determines which species each 
+#              kmer occurs in (across k) and builds a confusion matrix.
+#
 # Date: 6/30/22
 ####################################################
 
@@ -328,7 +333,7 @@ rule intersection_text_dump_exp_type_6:
 # Section 3.7 Runs python script to generate a 
 # confusion matrix and accuracy scores for one value of k.
 
-rule run_merge_list_exp_type4:
+rule run_merge_list_exp_type_6:
     input:
         get_filelists_and_text_dumps_exp_6
     output:
@@ -348,7 +353,7 @@ rule run_merge_list_exp_type4:
 # Section 3.8 Concatonates accuracy score tables
 # for all values of k to final csv file.
 
-rule concatonate_accuracies_exp_type4:
+rule concatonate_accuracies_exp_type_6:
     input:
         expand("accuracies/{read_type}/accuracy/k_{k}_accuracy.csv", k = k_values, read_type = {"illumina","ont"})
     output:
