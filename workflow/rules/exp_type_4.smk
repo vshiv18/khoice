@@ -2,6 +2,11 @@
 # Name: exp_type_4.smk
 # Description: Contains functions and rules for
 #              the type of experiment type 4: 
+#
+#              Selects an out-pivot genome from each species, 
+#              determines what groups each k-mer occurs in 
+#              and builds a confusion matrix.
+#
 # Date: 6/14/22
 ####################################################
 
@@ -107,7 +112,7 @@ if exp_type == 4:
 #            experiment rules.
 ####################################################
 
-def get_all_genomes_in_dataset(wildcards):
+def get_all_genomes_in_dataset_exp_4(wildcards):
     """ Returns a list of database in a certain dataset """
     input_files = []
     for data_file in os.listdir(f"input_type4/rest_of_set/dataset_{wildcards.num}/"):
@@ -116,7 +121,7 @@ def get_all_genomes_in_dataset(wildcards):
             input_files.append(f"genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
     return input_files
 
-def get_filelists_and_text_dumps(wildcards):
+def get_filelists_and_text_dumps_exp_4(wildcards):
     """ Generates text dumps needed for filelists, then returns filelists """
     needed_files = []
     needed_files.append("filelists/k_{k}/intersections_filelist.txt")
@@ -173,7 +178,7 @@ rule transform_genome_to_set_exp_type_4:
 
 rule rest_of_set_union_exp_type_4:
     input:
-        get_all_genomes_in_dataset
+        get_all_genomes_in_dataset_exp_4
     output:
         "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
         "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
@@ -193,7 +198,7 @@ rule union_histogram_exp_type_4:
         histogram unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.hist.txt \
         """
 
-rule transform_union_to_set_exp_type4:
+rule transform_union_to_set_exp_type_4:
     input: 
         "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
         "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
@@ -209,7 +214,7 @@ rule transform_union_to_set_exp_type4:
 # Section 3.4: Performs intersection
 # between pivot and unioned databases.
 
-rule pivot_intersect_exp_type4:
+rule pivot_intersect_exp_type_4:
     input:
         "step_1_type4/pivot/k_{k}/dataset_{pivot_num}/pivot_{pivot_num}.kmc_pre",
         "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre"
@@ -223,7 +228,7 @@ rule pivot_intersect_exp_type4:
         intersection_results/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} -ocsum
         """
 
-rule intersection_histogram_exp_type4:
+rule intersection_histogram_exp_type_4:
     input:
         "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
         "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
@@ -239,7 +244,7 @@ rule intersection_histogram_exp_type4:
 # Section 3.5 Generates text dump of 
 # pivot and intersection kmc files.
 
-rule pivot_text_dump_exp_type4:
+rule pivot_text_dump_exp_type_4:
     input:
         "step_1_type4/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_pre",
         "step_1_type4/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_suf"
@@ -252,7 +257,7 @@ rule pivot_text_dump_exp_type4:
         dump -s text_dump/k_{wildcards.k}/pivot/pivot_{wildcards.num}.txt \
         """
 
-rule intersection_text_dump_exp_type4:
+rule intersection_text_dump_exp_type_4:
     input:
         "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
         "intersection_results/k_{k}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
@@ -268,9 +273,9 @@ rule intersection_text_dump_exp_type4:
 # Section 3.7 Runs python script to generate a 
 # confusion matrix and accuracy scores for one value of k.
 
-rule run_merge_list_exp_type4:
+rule run_merge_list_exp_type_4:
     input:
-        get_filelists_and_text_dumps
+        get_filelists_and_text_dumps_exp_4
     output:
         "accuracies/accuracy/k_{k}_accuracy.csv",
         "accuracies/confusion_matrix/k_{k}_confusion_matrix.csv"

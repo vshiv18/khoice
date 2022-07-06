@@ -1,9 +1,11 @@
 ####################################################
 # Name: exp_type_2.smk
 # Description: Contains functions and rules for
-#              the type of experiment type 2: this
-#              type is where we generally look at the
-#              kmer set in genomes w.r.t a pivot genome.
+#              the type of experiment type 2:
+#
+#              Focuses on the kmer set of a particular 
+#              out-pivot genome and looks at how unique its
+#              k-mer set when compared to other groups of genomes.
 #
 # Date: 2/3/22
 ####################################################
