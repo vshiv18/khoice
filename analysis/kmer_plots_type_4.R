@@ -91,11 +91,12 @@ output_name <- paste(working_dir, "accuracy_plot.png", sep="")
 ggsave(output_name, plot=my_plot, dpi=800, device="jpeg", width=7, height=6)
 
 
-# Generate Confusion Heatmap for k
+# Generate Confusion Heat map for k
 confusion <- read.csv(confusion_matrix_data_path, header=FALSE)
 
 confusion_matrix = as.matrix(confusion)
 
+# Normalize confusion matrix values to # hm
 group_sums = rowSums(confusion_matrix)
 norm_matrix <-matrix(nrow=nrow(confusion_matrix),ncol=ncol(confusion_matrix))
 for(i in 1:nrow(norm_matrix)){
@@ -103,13 +104,12 @@ for(i in 1:nrow(norm_matrix)){
     norm_matrix[i,j] = round(confusion_matrix[i,j]/group_sums[i], 2)
   }
 }
-
+# Modify row and col names
 rownames(norm_matrix) <- dataset_names
-
 cols <- append(dataset_names,"Unidentified")
-
 colnames(norm_matrix) <- cols
 
+# Transform n
 data_melt <- melt(norm_matrix)
 colnames(data_melt) <- c("True","Predicted","Value")
 my_plot <- make_confusion_heatmap(data_melt,k)   
