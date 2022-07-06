@@ -2,6 +2,11 @@
 # Name: exp_type_5.smk
 # Description: Contains functions and rules for
 #              the type of experiment type 5: 
+#
+#              Selects an out-pivot genome from each species, 
+#              finds its half-mems/mems with respect to a combined 
+#              database, and builds a confusion matrix.
+#
 # Date: 6/22/22
 ####################################################
 
@@ -43,17 +48,19 @@ if exp_type == 5:
 #            experiment rules.
 ####################################################
 
-def get_all_non_pivot_genomes():
+def get_all_non_pivot_genomes_exp_5():
     """ Returns list of all non-pivot genomes """
-    input_files = []
-    for i in range(1, num_datasets + 1):
-        for data_file in os.listdir(f"non_pivot_type_5/dataset_{i}/"):
-            if data_file.endswith(".fna"):
-                file_name = data_file.split(".fna")[0]
-                input_files.append(f"non_pivot_type_5/dataset_{i}/{file_name}.fna")
-    return input_files
+    if exp_type == 5:
+        input_files = []
+        for i in range(1, num_datasets + 1):
+            for data_file in os.listdir(f"non_pivot_type_5/dataset_{i}/"):
+                if data_file.endswith(".fna"):
+                    file_name = data_file.split(".fna")[0]
+                    input_files.append(f"non_pivot_type_5/dataset_{i}/{file_name}.fna")
+        return input_files
+    return ""
 
-def get_dataset_non_pivot_genomes(wildcards):
+def get_dataset_non_pivot_genomes_exp_5(wildcards):
     """ Returns list of non-pivot genomes for a given dataset """
     input_files = []
     for data_file in os.listdir(f"non_pivot_type_5/dataset_{wildcards.num}/"):
@@ -62,21 +69,14 @@ def get_dataset_non_pivot_genomes(wildcards):
             input_files.append(f"non_pivot_type_5/dataset_{wildcards}/{file_name}.fna")
     return input_files
 
-def get_hm_python_input():
-    """ Returns list of text files with reference names for each dataset AND all pivot SAM files """
+def get_python_input_exp_5(wildcards):
+    """ Returns list of text files with reference names for each dataset AND all pivot SAM files for mem type """
     input_files = []
     for i in range(1,num_datasets+1):
         input_files.append(f"ref_lists_type_5/dataset_{i}_references.txt")
-        input_files.append(f"sam/hm_pivot_{i}.sam")
+        input_files.append(f"sam/{wildcards.mem_type}/pivot_{i}.sam")
     return input_files
 
-def get_m_python_input():
-    """ Returns list of text files with reference names for each dataset AND all pivot SAM files """
-    input_files = []
-    for i in range(1,num_datasets+1):
-        input_files.append(f"ref_lists_type_5/dataset_{i}_references.txt")
-        input_files.append(f"sam/m_pivot_{i}.sam")
-    return input_files
 
 ####################################################
 # Section 3: Rules needed for this experiment type
@@ -86,7 +86,7 @@ def get_m_python_input():
 
 rule concat_ref_exp_5:
     input:
-        get_all_non_pivot_genomes()
+        get_all_non_pivot_genomes_exp_5()
     output:
         "combined_type_5/combined_ref_forward.fna"
     shell:
@@ -214,7 +214,7 @@ rule ref_ri_align_mem_exp_5:
 
 rule gen_ref_list_exp_5:
     input:
-        get_dataset_non_pivot_genomes
+        get_dataset_non_pivot_genomes_exp_5
     output:
         "ref_lists_type_5/dataset_{num}_references.txt"
     shell:
@@ -224,36 +224,19 @@ rule gen_ref_list_exp_5:
         done
         """
 
-# Section 3.6 
+# Section 3.6 Outputs confusion matrix for either half-mem/mems
 
-rule analyze_half_mems_exp_5:
+rule analyze_sam_exp_5:
     input:
-        get_hm_python_input()
+        get_python_input_exp_5
     output:
-        "output/hm_confusion_matrix.csv",
-        "output/hm_accuracies.csv"
+        "output/{mem_type}/confusion_matrix.csv",
     shell:
         """
         python3 {repo_dir}/src/analyze_sam.py \
         -n {num_datasets} \
-        -s {base_dir}/sam/ \
+        -s {base_dir}/sam/{wildcards.mem_type}/ \
         -r {base_dir}/ref_lists_type_5/ \
-        -o {base_dir}/output/ \
-        --half-mems
-        """
-
-rule analyze_mems_exp_5:
-    input:
-        get_m_python_input()
-    output:
-        "output/m_confusion_matrix.csv",
-        "output/m_accuracies.csv"
-    shell:
-        """
-        python3 {repo_dir}/src/analyze_sam.py \
-        -n {num_datasets} \
-        -s {base_dir}/sam/ \
-        -r {base_dir}/ref_lists_type_5/ \
-        -o {base_dir}/output/ \
-        --mems
+        -o {base_dir}/output/{wildcards.mem_type}/ \
+        --{mem_type}
         """
