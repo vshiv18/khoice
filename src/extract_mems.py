@@ -114,7 +114,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Takes in matching statistic lengths, and extracts either half-mems or mems, prints to stdout.")
     parser.add_argument("-l", dest="length_file", help="path to matching statistic length file", required=True)
     parser.add_argument("-p", dest="pattern_file", help="path to pattern file that correspond to the matching statistics.", required=True)
-    parser.add_argument("--half-mems", action="store_true", default=False, dest="half_mems", help="extract half-mems and print to stdout")
+    parser.add_argument("--half_mems", action="store_true", default=False, dest="half_mems", help="extract half-mems and print to stdout")
     parser.add_argument("--mems", action="store_true", default=False, dest="mems", help="extract mems and print to stdout (it can either be mems or half-mems, not both)")
     parser.add_argument("-t", dest="threshold", default=0, type=int, help="threshold for half-mem length to use")
     parser.add_argument("-o", dest="output_file", help="path to output file", required=True)

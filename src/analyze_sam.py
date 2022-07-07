@@ -25,10 +25,14 @@ def main(args):
 
         for read in sam_file.fetch():
             dataset = find_class_of_reference_name(refs_list, read.reference_name)
-            if read.query_name not in read_mappings:   
-                read_mappings[read.query_name] = [int(read.query_name.split("_")[3])]
-            read_mappings[read.query_name].append(dataset)
+            query_length = int(read.query_name.split("_")[3])
+            # Only uses reads above threshold
+            if query_length >= args.t:
+                if read.query_name not in read_mappings:   
+                    read_mappings[read.query_name] = [query_length]
+                read_mappings[read.query_name].append(dataset)
         sam_file.close()
+        print(read_mappings)
         for key in read_mappings:
             mem_len = read_mappings[key][0]
             curr_set = set(read_mappings[key][1:])
@@ -38,7 +42,7 @@ def main(args):
     
     # Create output file
     output_matrix = args.output_dir + "confusion_matrix.csv"
-    output_precision = args.output_dir + "precision.csv"
+    #output_precision = args.output_dir + "precision.csv"
     
     # Write confusion matrix to output csv
     with open(output_matrix,"w+") as csvfile:
@@ -46,15 +50,6 @@ def main(args):
         for row in confusion_matrix:
             writer.writerow(row)
 
-    # Calculates precision and writes to output csv
-    precision = []
-    for pivot in range(args.num_datasets):
-        precision.append(confusion_matrix[pivot][pivot]/sum(confusion_matrix[pivot]))
-            
-    
-    with open(output_precision,"w+") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(precision)
 
 def parse_arguments():
     """ Defines the command-line argument parser, and return arguments """
@@ -66,6 +61,7 @@ def parse_arguments():
     parser.add_argument("-o", "--output_path", dest = "output_dir", required=True, help="path to directory for output matrix and accuracies")
     parser.add_argument("--half_mems", action="store_true", default=False, dest="half_mems", help="sam corresponds to half-mems")
     parser.add_argument("--mems", action="store_true", default=False, dest="mems", help="sam corresponds to mems (it can either be mems or half-mems, not both)")
+    parser.add_argument("-t", "--threshold", dest = "t", required=False, default=0, help="optional threshold value for experiment 8")
     args = parser.parse_args()
     return args
 

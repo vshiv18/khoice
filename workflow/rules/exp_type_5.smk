@@ -50,23 +50,23 @@ if exp_type == 5:
 
 def get_all_non_pivot_genomes_exp_5():
     """ Returns list of all non-pivot genomes """
+    input_files = []
     if exp_type == 5:
-        input_files = []
         for i in range(1, num_datasets + 1):
             for data_file in os.listdir(f"non_pivot_type_5/dataset_{i}/"):
                 if data_file.endswith(".fna"):
                     file_name = data_file.split(".fna")[0]
                     input_files.append(f"non_pivot_type_5/dataset_{i}/{file_name}.fna")
-        return input_files
-    return ""
+    return input_files
 
 def get_dataset_non_pivot_genomes_exp_5(wildcards):
     """ Returns list of non-pivot genomes for a given dataset """
     input_files = []
-    for data_file in os.listdir(f"non_pivot_type_5/dataset_{wildcards.num}/"):
-        if data_file.endswith(".fna"):
-            file_name = data_file.split(".fna")[0]
-            input_files.append(f"non_pivot_type_5/dataset_{wildcards}/{file_name}.fna")
+    if(exp_type == 5):
+        for data_file in os.listdir(f"non_pivot_type_5/dataset_{wildcards.num}/"):
+            if data_file.endswith(".fna"):
+                file_name = data_file.split(".fna")[0]
+                input_files.append(f"non_pivot_type_5/dataset_{wildcards}/{file_name}.fna")
     return input_files
 
 def get_python_input_exp_5(wildcards):
@@ -74,7 +74,7 @@ def get_python_input_exp_5(wildcards):
     input_files = []
     for i in range(1,num_datasets+1):
         input_files.append(f"ref_lists_type_5/dataset_{i}_references.txt")
-        input_files.append(f"sam/{wildcards.mem_type}/pivot_{i}.sam")
+        input_files.append(f"sam_type_5/{wildcards.mem_type}/pivot_{i}.sam")
     return input_files
 
 
@@ -134,36 +134,20 @@ rule spumoni_run_exp_5:
 
 # Section 3.3: Extract Half-Mems and Mems from pivot MS
 
-rule extract_half_mems_exp_5:
-    input:
-        "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna.lengths",
-        "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna"
-    output:
-        "half_mems/pivot_{num}.fastq"
-    shell:
-        """
-        python3 {repo_dir}/src/extract_mems.py \
-        -l {base_dir}/pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna.lengths \
-        -p {base_dir}/pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna \
-        --half-mems \
-        -t {thresh} \
-        -o {base_dir}/half_mems/pivot_{wildcards.num}.fastq
-        """
-
 rule extract_mems_exp5:
     input:
         "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna.lengths",
         "pivot_ms_type_5/pivot_{num}/pivot_{num}.fna"
     output:
-        "mems/pivot_{num}.fastq"
+        "{mem_type}_type_5/pivot_{num}.fastq"
     shell:
         """
         python3 {repo_dir}/src/extract_mems.py \
-        -l {base_dir}/pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna.lengths \
-        -p {base_dir}/pivot_ms_type_5/pivot_{wildcards.num}/pivot_{wildcards.num}.fna \
-        --mems \
+        -l {base_dir}/{input[0]} \
+        -p {base_dir}/{input[1]} \
+        --{wildcards.mem_type} \
         -t {thresh} \
-        -o {base_dir}/mems/pivot_{wildcards.num}.fastq
+        -o {base_dir}/{output}
         """
 
 # Section 3.4: Build r-index
@@ -180,34 +164,21 @@ rule ref_ri_build_fasta_exp_5:
         cd {base_dir}
         """
 
-# Section 3.4: Create SAM file with located Half-Mems
-
-rule ref_ri_align_half_mem_exp_5:
-    input:
-        "combined_type_5/combined_ref_all.fna",
-        "combined_type_5/combined_ref_all.fna.ri",
-        "half_mems/pivot_{num}.fastq"
-    output:
-        "sam/hm_pivot_{num}.sam"
-    shell:
-        """
-        cd {r_dir} 
-        ri-align locate {base_dir}/combined_type_5/combined_ref_all.fna {base_dir}/half_mems/pivot_{wildcards.num}.fastq \
-        > {base_dir}/sam/hm_pivot_{wildcards.num}.sam
-        """
+# Section 3.4: Create SAM file with located Half-Mems/Mems
 
 rule ref_ri_align_mem_exp_5:
     input:
         "combined_type_5/combined_ref_all.fna",
-        "combined_type_5/combined_ref_all.fna.ri",
-        "mems/pivot_{num}.fastq"
+        "{mem_type}_type_5/pivot_{num}.fastq",
+        "combined_type_5/combined_ref_all.fna.ri"
+        
     output:
-        "sam/m_pivot_{num}.sam"
+        "sam_type_5/{mem_type}/pivot_{num}.sam"
     shell:
         """
         cd {r_dir} 
-        ri-align locate {base_dir}/combined_type_5/combined_ref_all.fna {base_dir}/mems/pivot_{wildcards.num}.fastq \
-        > {base_dir}/sam/m_pivot_{wildcards.num}.sam
+        ri-align locate {base_dir}/{input[0]} {base_dir}/{input[1]} \
+        > {base_dir}/{output}
         """
 
 # Section 3.5: Generate List of Reference Genomes
@@ -230,13 +201,13 @@ rule analyze_sam_exp_5:
     input:
         get_python_input_exp_5
     output:
-        "output/{mem_type}/confusion_matrix.csv",
+        "output_type_5/{mem_type}/confusion_matrix.csv",
     shell:
         """
         python3 {repo_dir}/src/analyze_sam.py \
         -n {num_datasets} \
-        -s {base_dir}/sam/{wildcards.mem_type}/ \
+        -s {base_dir}/sam_type_5/{wildcards.mem_type}/ \
         -r {base_dir}/ref_lists_type_5/ \
-        -o {base_dir}/output/{wildcards.mem_type}/ \
-        --{mem_type}
+        -o {base_dir}/output_type_5/{wildcards.mem_type}/ \
+        --{wildcards.mem_type}
         """
