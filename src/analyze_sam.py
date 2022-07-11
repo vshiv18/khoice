@@ -15,13 +15,15 @@ def main(args):
     # Set up confusion matrix and reference list
     confusion_matrix = [[0 for i in range(args.num_datasets)] for j in range(args.num_datasets)]
     refs_list = build_refs_list(args.ref_dir, args.num_datasets)
+
+    # Go through alignments for each pivot individually - corresponds to 
+    # a row in the confusion matrix
     for i in range(args.num_datasets):
         
-        # Selects individual sam file to build map of read matches
-        sam_file = pysam.AlignmentFile(args.sam_dir+"pivot_{n}.sam".format(n = i + 1), "r")
-        
-        print("\n[log] building a dictionary of the read alignments for pivot {n}".format(n = i + 1))
+        # Selects individual SAM file to build map of read matches
         read_mappings = {}
+        sam_file = pysam.AlignmentFile(args.sam_dir+"pivot_{n}.sam".format(n = i + 1), "r")  
+        print("\n[log] building a dictionary of the read alignments for pivot {n}".format(n = i + 1))
 
         for read in sam_file.fetch():
             dataset = find_class_of_reference_name(refs_list, read.reference_name)
@@ -32,12 +34,16 @@ def main(args):
                     read_mappings[read.query_name] = [query_length]
                 read_mappings[read.query_name].append(dataset)
         sam_file.close()
-        print(read_mappings)
+        
+        #print(read_mappings)
         for key in read_mappings:
             mem_len = read_mappings[key][0]
             curr_set = set(read_mappings[key][1:])
             for dataset in curr_set:
-                confusion_matrix[i][dataset -1] += 1/len(curr_set) * mem_len 
+                if args.mems:
+                    confusion_matrix[i][dataset -1] += 1/len(curr_set) * mem_len 
+                elif args.half_mems:
+                    confusion_matrix[i][dataset -1] += 1/len(curr_set)
         
     
     # Create output file
