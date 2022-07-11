@@ -68,7 +68,7 @@ if exp_type == 6:
             for data_file in os.listdir(f"input_type_6/rest_of_set/dataset_{num}"):
                 if data_file.endswith(".fna.gz"):
                     base_name = data_file.split(".fna.gz")[0]
-                    kmc_input_files.append(f"genome_sets/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
+                    kmc_input_files.append(f"exp6_genome_sets/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
             
             if not os.path.isdir(f"complex_ops/k_{k}/dataset_{num}/"):
                 os.mkdir(f"complex_ops/k_{k}/dataset_{num}/")
@@ -81,7 +81,7 @@ if exp_type == 6:
                     result_str += "set{} + ".format(i+1)
                 result_str = result_str[:-2] + ")"
                 fd.write("OUTPUT:\n")
-                fd.write(f"unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
+                fd.write(f"exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
 
     # Create filelists
@@ -97,9 +97,9 @@ if exp_type == 6:
             intersect_files = []
             pivot_files = []
             for pivot in range(1, num_datasets+1):
-                pivot_files.append("/text_dump/k_{k}/{read_type}/pivot/pivot_{pivot}.txt".format(k = k, pivot = pivot, read_type = read_type))
+                pivot_files.append("/exp6_text_dump/k_{k}/{read_type}/pivot/pivot_{pivot}.txt".format(k = k, pivot = pivot, read_type = read_type))
                 for num in range(1, num_datasets+1):
-                    intersect_files.append("/text_dump/k_{k}/{read_type}/intersection/pivot_{pivot}/pivot_{pivot}_intersect_dataset_{num}.txt".format(k = k, pivot = pivot, num = num, read_type = read_type))
+                    intersect_files.append("/exp6_text_dump/k_{k}/{read_type}/intersection/pivot_{pivot}/pivot_{pivot}_intersect_dataset_{num}.txt".format(k = k, pivot = pivot, num = num, read_type = read_type))
             with open(f"filelists/k_{k}/{read_type}/pivots_filelist.txt", "w") as fd:
                 for f in pivot_files:
                     fd.write(base_dir+f+"\n")
@@ -120,7 +120,7 @@ def get_all_genomes_in_dataset_exp_6(wildcards):
     for data_file in os.listdir(f"input_type_6/rest_of_set/dataset_{wildcards.num}/"):
         if data_file.endswith(".fna.gz"):
             file_name = data_file.split(".fna.gz")[0]
-            input_files.append(f"genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
+            input_files.append(f"exp6_genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
     return input_files
 
 def get_filelists_and_text_dumps_exp_6(wildcards):
@@ -129,9 +129,9 @@ def get_filelists_and_text_dumps_exp_6(wildcards):
     needed_files.append("filelists/k_{k}/{read_type}/intersections_filelist.txt".format(k = wildcards.k, read_type = wildcards.read_type))
     needed_files.append("filelists/k_{k}/{read_type}/pivots_filelist.txt".format(k = wildcards.k, read_type = wildcards.read_type))
     for pivot in range(1, num_datasets+1):
-            needed_files.append("text_dump/k_{k}/{read_type}/pivot/pivot_{pivot}.txt".format(k = wildcards.k, pivot = pivot, read_type = wildcards.read_type))
+            needed_files.append("exp6_text_dump/k_{k}/{read_type}/pivot/pivot_{pivot}.txt".format(k = wildcards.k, pivot = pivot, read_type = wildcards.read_type))
             for num in range(1, num_datasets+1):
-                needed_files.append("text_dump/k_{k}/{read_type}/intersection/pivot_{pivot}/pivot_{pivot}_intersect_dataset_{num}.txt".format(k = wildcards.k, pivot = pivot, num = num, read_type = wildcards.read_type))
+                needed_files.append("exp6_text_dump/k_{k}/{read_type}/intersection/pivot_{pivot}/pivot_{pivot}_intersect_dataset_{num}.txt".format(k = wildcards.k, pivot = pivot, num = num, read_type = wildcards.read_type))
     return needed_files
 
 ####################################################
@@ -175,24 +175,30 @@ rule convert_long_reads_to_fasta_and_subset_exp_6:
         "input_type_6/pivot_raw_reads/ont/dataset_{num}/pivot_{num}.fastq"
     output:
         "input_type_6/pivot_reads/ont/dataset_{num}/pivot_{num}.fa"
-    run:
-        num_lines = num_reads_per_dataset * 4
-        shell("head -n{num_lines} {input} > input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq")
-        shell("seqtk seq -a input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq > {output}")
-        shell("if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi")
-        shell("rm input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq")
+    shell:
+        """
+        num_lines=$(({num_reads_per_dataset} * 4))
 
-rule convert_pivot_to_fasta_and_subset_exp_6:
+        head -n $num_lines {input} > input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq
+        seqtk seq -a input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq > {output}
+        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
+        rm input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq
+        """
+
+rule convert_short_reads_to_fasta_and_subset_exp_6:
     input:
         "input_type_6/pivot_raw_reads/illumina/dataset_{num}/pivot_{num}.fq"
     output:
         "input_type_6/pivot_reads/illumina/dataset_{num}/pivot_{num}.fa"
-    run:
-        num_lines = num_reads_per_dataset * 4
-        shell("head -n{num_lines} {input} > input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq")
-        shell("seqtk seq -a input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq > {output}")
-        shell("if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi")
-        shell("rm input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq")
+    shell:
+        """
+        num_lines=$(({num_reads_per_dataset} * 4))
+
+        head -n $num_lines {input} > input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq
+        seqtk seq -a input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq > {output}
+        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
+        rm input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq
+        """
 
 # Section 3.2: Builds KMC databases, one rule
 # for pivot and one for all other genomes.
@@ -223,12 +229,12 @@ rule transform_genome_to_set_exp_type_6:
         "step_1_type_6/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
         "step_1_type_6/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
     output:
-        "genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_pre",
-        "genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_suf"
+        "exp6_genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_pre",
+        "exp6_genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_suf"
     shell:
         """
         kmc_tools transform step_1_type_6/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} \
-        set_counts 1 genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed
+        set_counts 1 exp6_genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed
         """
 
 # Section 3.4: Takes all genomes within a dataset
@@ -238,8 +244,8 @@ rule rest_of_set_union_exp_type_6:
     input:
         get_all_genomes_in_dataset_exp_6
     output:
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     shell:
         "kmc_tools complex complex_ops/k_{wildcards.k}/dataset_{wildcards.num}/ops_{wildcards.num}.txt"
 
@@ -247,28 +253,28 @@ rule rest_of_set_union_exp_type_6:
 
 rule union_histogram_exp_type_6:
     input:
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     output:
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.hist.txt"
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.hist.txt"
     shell:
         """
         kmc_tools transform \
-        unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
-        histogram unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.hist.txt \
+        exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
+        histogram exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.hist.txt \
         """
 
 rule transform_union_to_set_exp_type_6:
     input: 
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     output:
-        "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre",
-        "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_suf"
+        "exp6_genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre",
+        "exp6_genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_suf"
     shell:
      """
-        kmc_tools transform unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
-        set_counts 1 genome_sets/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed
+        kmc_tools transform exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
+        set_counts 1 exp6_genome_sets/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed
      """
 
 # Section 3.5: Performs intersection
@@ -277,28 +283,28 @@ rule transform_union_to_set_exp_type_6:
 rule pivot_intersect_exp_type_6:
     input:
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{pivot_num}.kmc_pre",
-        "genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre"
+        "exp6_genome_sets/unions/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre"
     output:
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
     shell:
         """
-        kmc_tools simple genome_sets/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed \
+        kmc_tools simple exp6_genome_sets/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed \
         step_1_type_6/pivot/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num} intersect \
-        intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} -ocsum
+        exp6_intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} -ocsum
         """
 
 rule intersection_histogram_exp_type_6:
     input:
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
     output:
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.hist.txt"
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.hist.txt"
     shell:
         """
         kmc_tools transform \
-        intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
-        histogram intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.hist.txt\
+        exp6_intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
+        histogram exp6_intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.hist.txt\
         """
 
 # Section 3.6 Generates text dump of 
@@ -309,25 +315,25 @@ rule pivot_text_dump_exp_type_6:
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{num}.kmc_pre",
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{num}.kmc_suf"
     output:
-        "text_dump/k_{k}/{read_type}/pivot/pivot_{num}.txt"
+        "exp6_text_dump/k_{k}/{read_type}/pivot/pivot_{num}.txt"
     shell: 
         """
         kmc_tools transform \
         step_1_type_6/pivot/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.num} \
-        dump -s text_dump/k_{wildcards.k}/{wildcards.read_type}/pivot/pivot_{wildcards.num}.txt \
+        dump -s exp6_text_dump/k_{wildcards.k}/{wildcards.read_type}/pivot/pivot_{wildcards.num}.txt \
         """
 
 rule intersection_text_dump_exp_type_6:
     input:
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
-        "intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_pre",
+        "exp6_intersection_results/k_{k}/{read_type}/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.kmc_suf"
     output:
-        "text_dump/k_{k}/{read_type}/intersection/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.txt"
+        "exp6_text_dump/k_{k}/{read_type}/intersection/pivot_{pivot_num}/pivot_{pivot_num}_intersect_dataset_{num}.txt"
     shell:
         """
         kmc_tools transform \
-        intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
-        dump -s text_dump/k_{wildcards.k}/{wildcards.read_type}/intersection/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.txt
+        exp6_intersection_results/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num} \
+        dump -s exp6_text_dump/k_{wildcards.k}/{wildcards.read_type}/intersection/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.txt
         """
 
 # Section 3.7 Runs python script to generate a 
@@ -337,31 +343,31 @@ rule run_merge_list_exp_type_6:
     input:
         get_filelists_and_text_dumps_exp_6
     output:
-        "accuracies/{read_type}/accuracy/k_{k}_accuracy.csv",
-        "accuracies/{read_type}/confusion_matrix/k_{k}_confusion_matrix.csv"
+        "exp6_accuracies/{read_type}/accuracy/k_{k}_accuracy.csv",
+        "exp6_accuracies/{read_type}/confusion_matrix/k_{k}_confusion_matrix.csv"
     shell:
         """
         python3 {repo_dir}/src/merge_lists.py \
         -p {base_dir}/filelists/k_{wildcards.k}/{wildcards.read_type}/pivots_filelist.txt \
         -i {base_dir}/filelists/k_{wildcards.k}/{wildcards.read_type}/intersections_filelist.txt \
-        -o {base_dir}/accuracies/{wildcards.read_type}/ \
+        -o {base_dir}/exp6_accuracies/{wildcards.read_type}/ \
         -n {num_datasets} \
         -k {wildcards.k} \
         """
 
 
-# Section 3.8 Concatonates accuracy score tables
+# Section 3.8 Concatenates accuracy score tables
 # for all values of k to final csv file.
 
-rule concatonate_accuracies_exp_type_6:
+rule concatenate_accuracies_exp_type_6:
     input:
-        expand("accuracies/{read_type}/accuracy/k_{k}_accuracy.csv", k = k_values, read_type = {"illumina","ont"})
+        expand("exp6_accuracies/{read_type}/accuracy/k_{k}_accuracy.csv", k = k_values, read_type = {"illumina","ont"})
     output:
-        "accuracies/short_accuracy_scores.csv",
-        "accuracies/long_accuracy_scores.csv"
+        "exp6_accuracies/short_accuracy_scores.csv",
+        "exp6_accuracies/long_accuracy_scores.csv"
     shell:
         """
-        cat accuracies/illumina/accuracy/k_*_accuracy.csv > accuracies/short_accuracy_scores.csv
-        cat accuracies/ont/accuracy/k_*_accuracy.csv > accuracies/long_accuracy_scores.csv
+        cat exp6_accuracies/illumina/accuracy/k_*_accuracy.csv > exp6_accuracies/short_accuracy_scores.csv
+        cat exp6_accuracies/ont/accuracy/k_*_accuracy.csv > exp6_accuracies/long_accuracy_scores.csv
         """
         
