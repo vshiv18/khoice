@@ -180,24 +180,30 @@ rule convert_long_reads_to_fasta_and_subset_exp_6:
         "input_type_6/pivot_raw_reads/ont/dataset_{num}/pivot_{num}.fastq"
     output:
         "input_type_6/pivot_reads/ont/dataset_{num}/pivot_{num}.fa"
-    run:
-        num_lines = num_reads_per_dataset * 4
-        shell("head -n{num_lines} {input} > input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq")
-        shell("seqtk seq -a input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq > {output}")
-        shell("if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi")
-        shell("rm input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq")
+    shell:
+        """
+        num_lines=$(({num_reads_per_dataset} * 4))
 
-rule convert_pivot_to_fasta_and_subset_exp_6:
+        head -n $num_lines {input} > input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq
+        seqtk seq -a input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq > {output}
+        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
+        rm input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq
+        """
+
+rule convert_short_reads_to_fasta_and_subset_exp_6:
     input:
         "input_type_6/pivot_raw_reads/illumina/dataset_{num}/pivot_{num}.fq"
     output:
         "input_type_6/pivot_reads/illumina/dataset_{num}/pivot_{num}.fa"
-    run:
-        num_lines = num_reads_per_dataset * 4
-        shell("head -n{num_lines} {input} > input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq")
-        shell("seqtk seq -a input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq > {output}")
-        shell("if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi")
-        shell("rm input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq")
+    shell:
+        """
+        num_lines=$(({num_reads_per_dataset} * 4))
+
+        head -n $num_lines {input} > input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq
+        seqtk seq -a input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq > {output}
+        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
+        rm input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq
+        """
 
 # Section 3.2: Builds KMC databases, one rule
 # for pivot and one for all other genomes.
@@ -355,10 +361,10 @@ rule run_merge_list_exp_type_6:
         """
 
 
-# Section 3.8 Concatonates accuracy score tables
+# Section 3.8 Concatenates accuracy score tables
 # for all values of k to final csv file.
 
-rule concatonate_accuracies_exp_type_6:
+rule concatenate_accuracies_exp_type_6:
     input:
         expand("accuracies_type_6/{read_type}/accuracy/k_{k}_accuracy.csv", k = k_values, read_type = {"illumina","ont"})
     output:

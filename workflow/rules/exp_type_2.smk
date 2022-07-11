@@ -29,51 +29,51 @@ if exp_type == 2:
         os.mkdir("tmp")
     
     # Parse out a pivot from the downloaded dataset
-    if not os.path.isdir("input_data/"):
+    if not os.path.isdir("input_type_2/"):
         for i in range(1, num_datasets+1):
             dir_prefix = f"data/dataset_{i}/"
             list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
 
-            if not os.path.isdir(f"input_data/rest_of_set/dataset_{i}"):
-                os.makedirs(f"input_data/rest_of_set/dataset_{i}")
+            if not os.path.isdir(f"input_type_2/rest_of_set/dataset_{i}"):
+                os.makedirs(f"input_type_2/rest_of_set/dataset_{i}")
 
             # Copy over all the files at first
             for data_file in list_of_files:
-                shutil.copy(data_file, f"input_data/rest_of_set/dataset_{i}")
+                shutil.copy(data_file, f"input_type_2/rest_of_set/dataset_{i}")
             
             # Extract the pivot and move to new directory
-            dir_prefix = f"input_data/rest_of_set/dataset_{i}/"
+            dir_prefix = f"input_type_2/rest_of_set/dataset_{i}/"
             list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
 
             pivot = random.choice(list_of_files)
-            if not os.path.isdir(f"input_data/pivot/dataset_{i}"):
-                os.makedirs(f"input_data/pivot/dataset_{i}")
+            if not os.path.isdir(f"input_type_2/pivot/dataset_{i}"):
+                os.makedirs(f"input_type_2/pivot/dataset_{i}")
             
             # Remove pivot from other set of genomes
-            shutil.copy(pivot, f"input_data/pivot/dataset_{i}/pivot_{i}.fna.gz")
+            shutil.copy(pivot, f"input_type_2/pivot/dataset_{i}/pivot_{i}.fna.gz")
             os.remove(pivot)
     
     # Initialize complex ops directory to start writing files
     if not os.path.isdir("complex_ops"):
-        os.makedirs("complex_ops/within_groups")
+        os.makedirs("complex_ops_type_2/within_groups")
     
     # Build the complex ops files for within groups
     for k in k_values:
-        if not os.path.isdir(f"complex_ops/within_groups/k_{k}"):
-            os.mkdir(f"complex_ops/within_groups/k_{k}")
+        if not os.path.isdir(f"complex_ops_type_2/within_groups/k_{k}"):
+            os.mkdir(f"complex_ops_type_2/within_groups/k_{k}")
         
         for num in range(1, num_datasets+1):
             kmc_input_files = []
 
-            for data_file in os.listdir(f"input_data/rest_of_set/dataset_{num}"):
+            for data_file in os.listdir(f"input_type_2/rest_of_set/dataset_{num}"):
                 if data_file.endswith(".fna.gz"):
                     base_name = data_file.split(".fna.gz")[0]
-                    kmc_input_files.append(f"genome_sets/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
+                    kmc_input_files.append(f"genome_sets_type_2/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
             
-            if not os.path.isdir(f"complex_ops/within_groups/k_{k}/dataset_{num}/"):
-                os.mkdir(f"complex_ops/within_groups/k_{k}/dataset_{num}/")
+            if not os.path.isdir(f"complex_ops_type_2/within_groups/k_{k}/dataset_{num}/"):
+                os.mkdir(f"complex_ops_type_2/within_groups/k_{k}/dataset_{num}/")
         
-            with open(f"complex_ops/within_groups/k_{k}/dataset_{num}/within_dataset_{num}.txt", "w") as fd:
+            with open(f"complex_ops_type_2/within_groups/k_{k}/dataset_{num}/within_dataset_{num}.txt", "w") as fd:
                 fd.write("INPUT:\n")
                 result_str = "("
                 for i, path in enumerate(kmc_input_files):
@@ -81,28 +81,28 @@ if exp_type == 2:
                     result_str += "set{} + ".format(i+1)
                 result_str = result_str[:-2] + ")"
                 fd.write("OUTPUT:\n")
-                fd.write(f"within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
+                fd.write(f"within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
     
-    if not os.path.isdir("complex_ops/across_groups"):
-        os.mkdir("complex_ops/across_groups")
+    if not os.path.isdir("complex_ops_type_2/across_groups"):
+        os.mkdir("complex_ops_type_2/across_groups")
 
     # This loop builds the across_groups operation files
     for k in k_values:
-        if not os.path.isdir(f"complex_ops/across_groups/k_{k}"):
-            os.mkdir(f"complex_ops/across_groups/k_{k}")
+        if not os.path.isdir(f"complex_ops_type_2/across_groups/k_{k}"):
+            os.mkdir(f"complex_ops_type_2/across_groups/k_{k}")
         
         # Build a file for each pivot 
         for pivot_num in range(1, num_datasets+1):
-            if not os.path.isdir(f"complex_ops/across_groups/k_{k}/pivot_{pivot_num}"):
-                os.mkdir(f"complex_ops/across_groups/k_{k}/pivot_{pivot_num}")
+            if not os.path.isdir(f"complex_ops_type_2/across_groups/k_{k}/pivot_{pivot_num}"):
+                os.mkdir(f"complex_ops_type_2/across_groups/k_{k}/pivot_{pivot_num}")
 
             kmc_input_files = []
             for i in range(1, num_datasets+1):
                 if i != pivot_num:
-                    kmc_input_files.append(f"within_databases/rest_of_set/k_{k}/dataset_{i}/dataset_{i}.transformed.combined.transformed")
+                    kmc_input_files.append(f"within_databases_type_2/rest_of_set/k_{k}/dataset_{i}/dataset_{i}.transformed.combined.transformed")
 
-            with open(f"complex_ops/across_groups/k_{k}/pivot_{pivot_num}/across_datasets_pivot_{pivot_num}.txt", "w") as fd:
+            with open(f"complex_ops_type_2/across_groups/k_{k}/pivot_{pivot_num}/across_datasets_pivot_{pivot_num}.txt", "w") as fd:
                 fd.write("INPUT:\n")
                 result_str = "("
                 for i, path in enumerate(kmc_input_files):
@@ -110,7 +110,7 @@ if exp_type == 2:
                     result_str += "set{} + ".format(i+1)
                 result_str = result_str[:-2] + ")"
                 fd.write("OUTPUT:\n")
-                fd.write(f"across_databases/k_{k}/pivot_{pivot_num}/all_datasets_pivot_{pivot_num}.transformed.combined.transformed.combined = {result_str}\n")
+                fd.write(f"across_databases_type_2/k_{k}/pivot_{pivot_num}/all_datasets_pivot_{pivot_num}.transformed.combined.transformed.combined = {result_str}\n")
                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
         
 
@@ -123,23 +123,23 @@ def get_across_group_union_for_pivot(wildcards):
     """ Returns the input files for this union operation - union across all groups except pivot group """
     k = wildcards.k
     num = wildcards.num
-    input_files = [f"within_databases/rest_of_set/k_{k}/dataset_{i}/dataset_{i}.transformed.combined.transformed.kmc_pre" for i in range(1, num_datasets+1) if i != num]
+    input_files = [f"within_databases_type_2/rest_of_set/k_{k}/dataset_{i}/dataset_{i}.transformed.combined.transformed.kmc_pre" for i in range(1, num_datasets+1) if i != num]
     return input_files
 
 def get_all_genomes_in_dataset(wildcards):
     """ Returns a list of database in a certain dataset """
     input_files = []
-    for data_file in os.listdir(f"input_data/rest_of_set/dataset_{wildcards.num}/"):
+    for data_file in os.listdir(f"input_type_2/rest_of_set/dataset_{wildcards.num}/"):
         if data_file.endswith(".fna.gz"):
             file_name = data_file.split(".fna.gz")[0]
-            input_files.append(f"genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
+            input_files.append(f"genome_sets_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{file_name}.transformed.kmc_pre")
     return input_files
 
 def get_dataset_pivot(wildcards):
     """ Return a path to the pivot for certain dataset """
-    pivot = os.listdir(f"input_data/pivot/dataset_{wildcards.num}/")
+    pivot = os.listdir(f"input_type_2/pivot/dataset_{wildcards.num}/")
     assert len(pivot) == 1
-    return [f"genome_sets/pivot/k_{wildcards.k}/dataset_{wildcards.num}/" + pivot[0].split(".fna.gz")[0] + ".transformed.kmc_pre"]
+    return [f"genome_sets_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/" + pivot[0].split(".fna.gz")[0] + ".transformed.kmc_pre"]
 
 def get_within_group_histogram_files(wildcards):
     """ Returns all the histogram files for within group experiment in specific order """
@@ -147,7 +147,7 @@ def get_within_group_histogram_files(wildcards):
     for num in range(1, num_datasets+1):
         for k in k_values:
             for op in ['subtract', 'intersect']:
-                input_files.append(f"within_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt")
+                input_files.append(f"within_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt")
     return input_files
 
 def get_across_group_histogram_files(wildcards):
@@ -156,7 +156,7 @@ def get_across_group_histogram_files(wildcards):
     for num in range(1, num_datasets+1):
         for k in k_values:
             for op in ['subtract', 'intersect']:
-                input_files.append(f"across_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt")
+                input_files.append(f"across_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt")
     return input_files
 
 def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, across_group_analysis, k):
@@ -216,21 +216,21 @@ def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, 
 
 rule build_kmc_database_on_genome_exp_type_2:
     input:
-        "input_data/rest_of_set/dataset_{num}/{genome}.fna.gz"
+        "input_type_2/rest_of_set/dataset_{num}/{genome}.fna.gz"
     output:
-        "step_1/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
-        "step_1/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
+        "step_1_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
+        "step_1_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
     shell:
-        "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} tmp/"
+        "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} tmp/"
 
 rule build_kmc_database_on_pivot_exp_type_2:
     input:
-        "input_data/pivot/dataset_{num}/pivot_{num}.fna.gz"
+        "input_type_2/pivot/dataset_{num}/pivot_{num}.fna.gz"
     output:
-        "step_1/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_pre",
-        "step_1/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_suf"
+        "step_1_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_pre",
+        "step_1_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_suf"
     shell:
-        "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} tmp/"
+        "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} tmp/"
 
 
 # Section 3.2: Converts each kmer database into 
@@ -238,28 +238,28 @@ rule build_kmc_database_on_pivot_exp_type_2:
 
 rule transform_genome_to_set_exp_type2:
     input:
-        "step_1/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
-        "step_1/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
+        "step_1_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
+        "step_1_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
     output:
-        "genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_pre",
-        "genome_sets/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_suf"
+        "genome_sets_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_pre",
+        "genome_sets_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.transformed.kmc_suf"
     shell:
         """
-        kmc_tools transform step_1/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} \
-        set_counts 1 genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed
+        kmc_tools transform step_1_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} \
+        set_counts 1 genome_sets_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed
         """
 
 rule transform_pivot_to_set_exp_type2:
     input:
-        "step_1/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_pre",
-        "step_1/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_suf"
+        "step_1_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_pre",
+        "step_1_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.kmc_suf"
     output:
-        "genome_sets/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre",
-        "genome_sets/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_suf"
+        "genome_sets_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre",
+        "genome_sets_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_suf"
     shell:
         """
-        kmc_tools transform step_1/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} \
-        set_counts 1 genome_sets/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed
+        kmc_tools transform step_1_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} \
+        set_counts 1 genome_sets_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed
         """
 
 # Section 3.3: Takes all genomes within a dataset
@@ -269,10 +269,10 @@ rule within_group_union_exp_type2:
     input:
         get_all_genomes_in_dataset
     output:
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     shell:
-        "kmc_tools complex complex_ops/within_groups/k_{wildcards.k}/dataset_{wildcards.num}/within_dataset_{wildcards.num}.txt"
+        "kmc_tools complex complex_ops_type_2/within_groups/k_{wildcards.k}/dataset_{wildcards.num}/within_dataset_{wildcards.num}.txt"
 
 
 # Section 3.4: Performs the needed operations to generate
@@ -280,43 +280,43 @@ rule within_group_union_exp_type2:
 
 rule pivot_intersect_within_group_exp_type2:
     input:
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "genome_sets/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "genome_sets_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
     output:
-        "within_dataset_results/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_pre",
-        "within_dataset_results/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_suf"
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_pre",
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_suf"
     shell:
         """ 
-        kmc_tools simple genome_sets/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
-        within_databases/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined intersect  \
-        within_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/intersect/dataset_{wildcards.num}_pivot_intersect_group -ocsum
+        kmc_tools simple genome_sets_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
+        within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined intersect  \
+        within_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/intersect/dataset_{wildcards.num}_pivot_intersect_group -ocsum
         """
 
 rule pivot_subtract_within_group_exp_type2:
     input:
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "genome_sets/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "genome_sets_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
     output:
-        "within_dataset_results/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_pre",
-        "within_dataset_results/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_suf"
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_pre",
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_suf"
     shell:
         """ 
-        kmc_tools simple genome_sets/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
-        within_databases/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined kmers_subtract \
-        within_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/subtract/dataset_{wildcards.num}_pivot_subtract_group 
+        kmc_tools simple genome_sets_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
+        within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined kmers_subtract \
+        within_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/subtract/dataset_{wildcards.num}_pivot_subtract_group 
         """
 
 rule within_group_histogram_exp_type2:
     input:
-        "within_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_pre",
-        "within_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_suf"
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_pre",
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_suf"
     output:
-        "within_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt"
+        "within_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt"
     shell:
         """
         kmc_tools transform \
-        within_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group \
-        histogram within_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group.hist.txt \
+        within_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group \
+        histogram within_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group.hist.txt \
         """
 
 
@@ -326,7 +326,7 @@ rule within_group_analysis_exp_type2:
     input:
         get_within_group_histogram_files
     output:
-        "within_dataset_analysis/within_dataset_analysis.csv"
+        "within_dataset_analysis_type_2/within_dataset_analysis.csv"
     run:
         with open(output[0], "w") as output_fd:
             output_fd.write(f"group_num,k,percent_1_occ,percent_25_or_less,percent_25_to_75,percent_75_or_more,"
@@ -369,15 +369,15 @@ rule within_group_analysis_exp_type2:
 
 rule transform_rest_of_set_to_single_counts:
     input:
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     output:
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre",
-        "within_databases/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_suf"
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_pre",
+        "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.transformed.kmc_suf"
     shell:
         """
-        kmc_tools transform within_databases/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
-        set_counts 1 within_databases/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed
+        kmc_tools transform within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
+        set_counts 1 within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed
         """
 
 # Section 3.7: Generate the across_groups databases for each pivot
@@ -386,53 +386,53 @@ rule across_group_union_for_pivot_exp_type2:
     input:
         get_across_group_union_for_pivot
     output:
-        "across_databases/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
-        "across_databases/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_suf"
+        "across_databases_type_2/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
+        "across_databases_type_2/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_suf"
     shell:
-        "kmc_tools complex complex_ops/across_groups/k_{wildcards.k}/pivot_{wildcards.num}/across_datasets_pivot_{wildcards.num}.txt"
+        "kmc_tools complex complex_ops_type_2/across_groups/k_{wildcards.k}/pivot_{wildcards.num}/across_datasets_pivot_{wildcards.num}.txt"
 
 
 # Section 3.8: Generate the databases needed for the across group analysis
 
 rule pivot_intersect_across_group_exp_type2:
     input:
-        "across_databases/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
-        "genome_sets/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
+        "across_databases_type_2/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
+        "genome_sets_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
     output:
-        "across_dataset_results/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_pre",
-        "across_dataset_results/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_suf"
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_pre",
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/intersect/dataset_{num}_pivot_intersect_group.kmc_suf"
     shell:
         """ 
-        kmc_tools simple genome_sets/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
-        across_databases/k_{wildcards.k}/pivot_{wildcards.num}/all_datasets_pivot_{wildcards.num}.transformed.combined.transformed.combined intersect  \
-        across_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/intersect/dataset_{wildcards.num}_pivot_intersect_group -ocsum
+        kmc_tools simple genome_sets_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
+        across_databases_type_2/k_{wildcards.k}/pivot_{wildcards.num}/all_datasets_pivot_{wildcards.num}.transformed.combined.transformed.combined intersect  \
+        across_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/intersect/dataset_{wildcards.num}_pivot_intersect_group -ocsum
         """
 
 rule pivot_subtract_across_group_exp_type2:
     input:
-        "across_databases/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
-        "genome_sets/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
+        "across_databases_type_2/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
+        "genome_sets_type_2/pivot/k_{k}/dataset_{num}/pivot_{num}.transformed.kmc_pre"
     output:
-        "across_dataset_results/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_pre",
-        "across_dataset_results/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_suf"
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_pre",
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/subtract/dataset_{num}_pivot_subtract_group.kmc_suf"
     shell:
         """ 
-        kmc_tools simple genome_sets/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
-        across_databases/k_{wildcards.k}/pivot_{wildcards.num}/all_datasets_pivot_{wildcards.num}.transformed.combined.transformed.combined kmers_subtract \
-        across_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/subtract/dataset_{wildcards.num}_pivot_subtract_group
+        kmc_tools simple genome_sets_type_2/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num}.transformed \
+        across_databases_type_2/k_{wildcards.k}/pivot_{wildcards.num}/all_datasets_pivot_{wildcards.num}.transformed.combined.transformed.combined kmers_subtract \
+        across_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/subtract/dataset_{wildcards.num}_pivot_subtract_group
         """
 
 rule across_group_histogram_exp_type2:
     input:
-        "across_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_pre",
-        "across_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_suf"
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_pre",
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.kmc_suf"
     output:
-        "across_dataset_results/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt"
+        "across_dataset_results_type_2/k_{k}/dataset_{num}/{op}/dataset_{num}_pivot_{op}_group.hist.txt"
     shell:
         """
         kmc_tools transform \
-        across_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group \
-        histogram across_dataset_results/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group.hist.txt \
+        across_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group \
+        histogram across_dataset_results_type_2/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.op}/dataset_{wildcards.num}_pivot_{wildcards.op}_group.hist.txt \
         """
 
 
@@ -442,7 +442,7 @@ rule across_group_analysis_exp_type2:
     input:
         get_across_group_histogram_files
     output:
-        "across_dataset_analysis/across_dataset_analysis.csv"
+        "across_dataset_analysis_type_2/across_dataset_analysis.csv"
     run:
         with open(output[0], "w") as output_fd:
             output_fd.write(f"group_num,k,percent_1_occ,percent_2_to_3,percent_4_to_8,percent_9_more," 

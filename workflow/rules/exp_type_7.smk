@@ -48,25 +48,26 @@ if exp_type == 7:
 #            experiment rules.
 ####################################################
 
-def get_all_non_pivot_genomes_exp_7():
+def get_all_non_pivot_genomes_exp_7(wildcards):
     """ Returns list of all non-pivot genomes """
     input_files = []
-    if(exp_type == 7):  
+    if exp_type == 7:  
         for i in range(1, num_datasets + 1):
             for data_file in os.listdir(f"non_pivot_type_7/dataset_{i}/"):
                 if data_file.endswith(".fna"):
                     file_name = data_file.split(".fna")[0]
                     input_files.append(f"non_pivot_type_7/dataset_{i}/{file_name}.fna")
+    print(len(input_files))
     return input_files
 
 def get_dataset_non_pivot_genomes_exp_7(wildcards):
     """ Returns list of non-pivot genomes for a given dataset """
     input_files = []
-    if(exp_type == 7):
+    if exp_type == 7:
         for data_file in os.listdir(f"non_pivot_type_7/dataset_{wildcards.num}/"):
             if data_file.endswith(".fna"):
                 file_name = data_file.split(".fna")[0]
-                input_files.append(f"non_pivot_type_7/dataset_{wildcards}/{file_name}.fna")
+                input_files.append(f"non_pivot_type_7/dataset_{wildcards.num}/{file_name}.fna")
     return input_files
 
 def get_python_input_exp_7(wildcards):
@@ -117,31 +118,36 @@ rule convert_long_reads_to_fasta_and_subset_exp_7:
         "pivot_type_7/pivot_raw_reads/ont/pivot_{num}.fastq"
     output:
         "ms_type_7/ont/pivot_{num}/pivot_{num}.fna"
-    run:
-        num_lines = num_reads_per_dataset * 4
-        shell("head -n{num_lines} {input} > pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq")
-        shell("seqtk seq -a pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq > {output}")
-        shell("if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi")
-        shell("rm pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq")
+    shell:
+        """
+        num_lines=$(({num_reads_per_dataset} * 4))
 
-rule convert_pivot_to_fasta_and_subset_exp_7:
+        head -n $num_lines {input} > pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq
+        seqtk seq -a pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq > {output}  
+        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi    
+        rm pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq  
+        """
+
+rule convert_short_reads_to_fasta_and_subset_exp_7:
     input:
         "pivot_type_7/pivot_raw_reads/illumina/pivot_{num}.fq"
     output:
         "ms_type_7/illumina/pivot_{num}/pivot_{num}.fna"
-    run:
-        num_lines = num_reads_per_dataset * 4
-        shell("head -n{num_lines} {input} > pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq")
-        shell("seqtk seq -a pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq > {output}")
-        shell("if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi")
-        shell("rm pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq")
+    shell:
+        """
+        num_lines=$(({num_reads_per_dataset} * 4))
 
+        head -n $num_lines {input} > pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq
+        seqtk seq -a pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq > {output}
+        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
+        rm pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq
+        """
 
 # Section 3.2: Concatonating ALL reference genomes and reverse complements
 
 rule concat_ref_exp_7:
     input:
-        get_all_non_pivot_genomes_exp_7()
+        get_all_non_pivot_genomes_exp_7
     output:
         "combined_type_7/combined_ref_forward.fna"
     shell:
