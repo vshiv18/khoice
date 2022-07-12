@@ -48,7 +48,7 @@ if exp_type == 6:
             pivot = random.choice(list_of_files)
 
             # Print pivot name to list in trial folder
-            with open('/home/ext-mcheng29/scratch16-blangme2/marie/trial_data/pivot_names.txt', 'a') as fd: # Remove hardcode
+            with open('/home/ext-mcheng29/scratch16-blangme2/marie/b_trial_data/pivot_names.txt', 'a') as fd: # Remove hardcode
                 fd.write(pivot+"\n")
 
             if not os.path.isdir(f"input_type_6/pivot/dataset_{i}"):
@@ -348,8 +348,7 @@ rule run_merge_list_exp_type_6:
     input:
         get_filelists_and_text_dumps_exp_6
     output:
-        "accuracies_type_6/{read_type}/accuracy/k_{k}_accuracy.csv",
-        "accuracies_type_6/{read_type}/confusion_matrix/k_{k}_confusion_matrix.csv"
+        "accuracies_type_6/{read_type}/values/k_{k}_accuracy_values.csv"
     shell:
         """
         python3 {repo_dir}/src/merge_lists.py \
@@ -366,13 +365,13 @@ rule run_merge_list_exp_type_6:
 
 rule concatenate_accuracies_exp_type_6:
     input:
-        expand("accuracies_type_6/{read_type}/accuracy/k_{k}_accuracy.csv", k = k_values, read_type = {"illumina","ont"})
+        expand("accuracies_type_6/{read_type}/values/k_{k}_accuracy_values.csv", k = k_values, read_type = {"illumina","ont"})
     output:
-        "accuracies_type_6/short_accuracy_scores.csv",
-        "accuracies_type_6/long_accuracy_scores.csv"
+        "accuracies_type_6/short_accuracy_values.csv",
+        "accuracies_type_6/long_accuracy_values.csv"
     shell:
         """
-        cat accuracies_type_6/illumina/accuracy/k_*_accuracy.csv > accuracies_type_6/short_accuracy_scores.csv
-        cat accuracies_type_6/ont/accuracy/k_*_accuracy.csv > accuracies_type_6/long_accuracy_scores.csv
+        cat accuracies_type_6/illumina/values/k_*_accuracy_values.csv > accuracies_type_6/short_accuracy_values.csv
+        cat accuracies_type_6/ont/values/k_*_accuracy_values.csv > accuracies_type_6/long_accuracy_values.csv
         """
         
