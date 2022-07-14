@@ -51,11 +51,11 @@ if exp_type == 6:
             with open('/home/ext-mcheng29/scratch16-blangme2/marie/b_trial_data/pivot_names.txt', 'a') as fd: # Remove hardcode
                 fd.write(pivot+"\n")
 
-            if not os.path.isdir(f"input_type_6/pivot/dataset_{i}"):
-                os.makedirs(f"input_type_6/pivot/dataset_{i}")
+            if not os.path.isdir(f"input_type_6/pivot/"):
+                os.makedirs(f"input_type_6/pivot/")
             
             # Remove pivot from other set of genomes
-            shutil.copy(pivot, f"input_type_6/pivot/dataset_{i}/pivot_{i}.fna.gz")
+            shutil.copy(pivot, f"input_type_6/pivot/pivot_{i}.fna.gz")
             os.remove(pivot)
     
     # Initialize complex ops directory to start writing files
@@ -148,63 +148,52 @@ def get_filelists_and_text_dumps_exp_6(wildcards):
 
 rule generate_raw_positive_short_reads_exp_6:
     input:
-        "input_type_6/pivot/dataset_{num}/pivot_{num}.fna.gz"
+        "input_type_6/pivot/pivot_{num}.fna.gz"
     output:
-        temp("input_type_6/pivot_raw_reads/illumina/dataset_{num}/pivot_{num}.fq")
+        "input_type_6/pivot_reads/illumina/pivot_{num}.fa"
     shell:
         """
         gzip -d {input} -k -f
-        art_illumina -ss HS25 -i input_type_6/pivot/dataset_{wildcards.num}/pivot_{wildcards.num}.fna -na -l 150 -f 2.0 \
-        -o input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}
+        art_illumina -ss HS25 -i input_type_6/pivot/pivot_{wildcards.num}.fna -na -l 150 -f 15.0 \
+        -o input_type_6/pivot_reads/illumina/pivot_{wildcards.num}
+
+        seqtk seq -a input_type_6/pivot_reads/illumina/pivot_{wildcards.num}.fq > {output}
         """
 
 rule generate_raw_positive_long_reads_exp_6:
     input:
-        "input_type_6/pivot/dataset_{num}/pivot_{num}.fna.gz"
+        "input_type_6/pivot/pivot_{num}.fna.gz"
     output:
-        "input_type_6/pivot_raw_reads/ont/dataset_{num}/pivot_{num}.fastq"
+        "input_type_6/pivot_reads/ont/pivot_{num}.fa"
     shell:
         """
         gzip -d {input} -k -f
-        pbsim --depth 30.0 --prefix input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num} \
-        --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 input_type_6/pivot/dataset_{wildcards.num}/pivot_{wildcards.num}.fna
+        pbsim --depth 15.0 --prefix input_type_6/pivot_reads/ont/pivot_{wildcards.num} \
+        --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 input_type_6/pivot/pivot_{wildcards.num}.fna
         
-        cat 'input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}'*.fastq > {output}
-        rm 'input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_'*.fastq
-        ls  'input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}'*.ref | xargs rm
-        ls  'input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}'*.maf | xargs rm
+        cat 'input_type_6/pivot_reads/ont/pivot_{wildcards.num}'*.fastq > input_type_6/pivot_reads/ont/pivot_{wildcards.num}.fastq
+        seqtk seq -a input_type_6/pivot_reads/ont/pivot_{wildcards.num}.fastq > input_type_6/pivot_reads/ont/pivot_{wildcards.num}.fa
+        rm 'input_type_6/pivot_reads/ont/pivot_{wildcards.num}_'*.fastq
+        ls  'input_type_6/pivot_reads/ont/pivot_{wildcards.num}'*.ref | xargs rm
+        ls  'input_type_6/pivot_reads/ont/pivot_{wildcards.num}'*.maf | xargs rm
         """
 
-rule convert_long_reads_to_fasta_and_subset_exp_6:
+
+rule subset_reads_exp_6:
     input:
-        "input_type_6/pivot_raw_reads/ont/dataset_{num}/pivot_{num}.fastq"
+        "input_type_6/pivot_reads/{read_type}/pivot_{num}.fa"
     output:
-        "input_type_6/pivot_reads/ont/dataset_{num}/pivot_{num}.fa"
+        "input_type_6/pivot_reads_subset/k_{k}/{read_type}/pivot_{num}.fa"
     shell:
         """
-        num_lines=$(({num_reads_per_dataset} * 4))
-
-        head -n $num_lines {input} > input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq
-        seqtk seq -a input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq > {output}
-        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
-        rm input_type_6/pivot_raw_reads/ont/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fastq
+        python3 {repo_dir}/src/subset_reads.py \
+        -i {base_dir}/{input} \
+        -o {base_dir}/{output} \
+        -n {num_kmers} \
+        -k {wildcards.k} \
+        --kmers
         """
-
-rule convert_short_reads_to_fasta_and_subset_exp_6:
-    input:
-        "input_type_6/pivot_raw_reads/illumina/dataset_{num}/pivot_{num}.fq"
-    output:
-        "input_type_6/pivot_reads/illumina/dataset_{num}/pivot_{num}.fa"
-    shell:
-        """
-        num_lines=$(({num_reads_per_dataset} * 4))
-
-        head -n $num_lines {input} > input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq
-        seqtk seq -a input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq > {output}
-        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
-        rm input_type_6/pivot_raw_reads/illumina/dataset_{wildcards.num}/pivot_{wildcards.num}_subset.fq
-        """
-
+        
 # Section 3.2: Builds KMC databases, one rule
 # for pivot and one for all other genomes.
 
@@ -219,7 +208,7 @@ rule build_kmc_database_on_genome_exp_type_6:
 
 rule build_kmc_database_on_pivot_exp_type_6:
     input:
-        "input_type_6/pivot_reads/{read_type}/dataset_{num}/pivot_{num}.fa"
+        "input_type_6/pivot_reads_subset/k_{k}/{read_type}/pivot_{num}.fa"
     output:
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{num}.kmc_pre",
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{num}.kmc_suf"
@@ -348,7 +337,8 @@ rule run_merge_list_exp_type_6:
     input:
         get_filelists_and_text_dumps_exp_6
     output:
-        "accuracies_type_6/{read_type}/values/k_{k}_accuracy_values.csv"
+        "accuracies_type_6/{read_type}/values/k_{k}_accuracy_values.csv",
+        "accuracies_type_6/{read_type}/confusion_matrix/k_{k}_confusion_matrix.txt"
     shell:
         """
         python3 {repo_dir}/src/merge_lists.py \
