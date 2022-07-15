@@ -30,14 +30,14 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
 def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
     # Print first mem
     curr_mem_length = lengths_array[0]
-    write_mem_length = curr_mem_length
-    if curr_mem_length >= 1000:
-        write_mem_length = 1000
-    random_quality = "#" * write_mem_length
-    curr_mem = curr_seq[0:write_mem_length]
-    out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
-    curr_seq_id += 1
-    capped = 0
+    if(curr_mem_length >= threshold):
+        write_mem_length = curr_mem_length
+        if curr_mem_length >= 1000:
+            write_mem_length = 1000
+        random_quality = "#" * write_mem_length
+        curr_mem = curr_seq[0:write_mem_length]
+        out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
+        curr_seq_id += 1
 
     for i in range(1, len(curr_seq)):
         prev_mem_length = lengths_array[i - 1]

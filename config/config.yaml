@@ -1,8 +1,10 @@
-DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/exp6"
+DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/subset_test"
 REPO_DIRECTORY: "/home/ext-mcheng29/khoice"
 RINDEX_BUILD_DIRECTORY: "/home/ext-mcheng29/r-index/build"
 NUM_DATASETS: 2
 EXP_TYPE: 6
-THRESHOLD: 20
+THRESHOLD: 15
+
 PBSIM_MODEL: "/home/ext-mcheng29/pbsim2/data/R95.model"
-READS_PER_DATASET: 10000
+KMERS_PER_DATASET: 25000000
+NUM_READS_PER_DATASET: 10000

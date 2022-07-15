@@ -65,11 +65,11 @@ def main(args):
         curr_pivot_num += 1 
 
     # Print out confusion matrix to a csv file
-    #output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.csv"
-    #with open(output_matrix,"w+") as csvfile:
-    #    writer = csv.writer(csvfile)
-    #    for row in confusion_matrix:
-    #        writer.writerow(row)
+    output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.txt"
+    with open(output_matrix,"w+") as csvfile:
+        writer = csv.writer(csvfile)
+        for row in confusion_matrix:
+            writer.writerow(row)
     
     # Calculate accuracy values and print to csv file (k, dataset #, TP, TN, FP, FN)
     
