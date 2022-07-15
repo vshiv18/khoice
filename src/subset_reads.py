@@ -1,6 +1,7 @@
 
 import argparse
 import os
+import random
 
 def main(args):
     input = open(args.input, "r")
@@ -9,15 +10,22 @@ def main(args):
     line_num = 0
     entry_sum = 0
 
+
+
     if(args.kmers): 
         # Write kmers until over requested num
+        # Build dictionary of headers and reads
+        input_dict = {}
+        for i in range(0,len(input_lines),2):
+            if(">" in input_lines[i]):
+                input_dict[input_lines[i]] = input_lines[i+1]
+                
+        # Chose random read until reach kmer ceiling
         while(entry_sum < args.num_included and line_num < len(input_lines)):
-            curr_line = input_lines[line_num]
-            output.write(curr_line+"\n")
-            if(">" not in curr_line):
-                output.write(curr_line+"\n")
-                entry_sum += len(curr_line) - args.k + 1
-            line_num+=1
+            rand_entry = random.choice(list(input_dict.keys()))
+            rand_seq = input_dict[rand_entry]
+            output.write(rand_entry+"\n"+rand_seq+"\n")
+            entry_sum += len(rand_seq) - args.k + 1
     elif(args.half_mems):
         print("Not implemented")
     elif(args.mems):
