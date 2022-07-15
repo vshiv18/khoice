@@ -48,7 +48,7 @@ if exp_type == 6:
             pivot = random.choice(list_of_files)
 
             # Print pivot name to list in trial folder
-            with open('/home/ext-mcheng29/scratch16-blangme2/marie/b_trial_data/pivot_names.txt', 'a') as fd: # Remove hardcode
+            with open('/home/ext-mcheng29/scratch16-blangme2/marie/b_subset_trial_data/pivot_names.txt', 'a') as fd: # Remove hardcode
                 fd.write(pivot+"\n")
 
             if not os.path.isdir(f"input_type_6/pivot/"):
@@ -213,7 +213,10 @@ rule build_kmc_database_on_pivot_exp_type_6:
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{num}.kmc_pre",
         "step_1_type_6/pivot/k_{k}/{read_type}/pivot_{num}.kmc_suf"
     shell:
-        "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1_type_6/pivot/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.num} tmp/"
+        """
+        kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1_type_6/pivot/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.num} tmp/
+        """
+        
 
 # Section 3.3: Converts each kmer database into 
 # a set (multiplicity=1) for all databases.
@@ -229,6 +232,9 @@ rule transform_genome_to_set_exp_type_6:
         """
         kmc_tools transform step_1_type_6/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome} \
         set_counts 1 genome_sets_type_6/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{wildcards.genome}.transformed
+
+        # Remove step_1 rest of set
+        rm {input[0]} {input[1]}
         """
 
 # Section 3.4: Takes all genomes within a dataset
@@ -241,7 +247,14 @@ rule rest_of_set_union_exp_type_6:
         "unions_type_6/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
         "unions_type_6/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
     shell:
-        "kmc_tools complex complex_ops_type_6/k_{wildcards.k}/dataset_{wildcards.num}/ops_{wildcards.num}.txt"
+        """
+        kmc_tools complex complex_ops_type_6/k_{wildcards.k}/dataset_{wildcards.num}/ops_{wildcards.num}.txt
+        
+        # remove genome sets for this k and dataset
+        rm genome_sets_type_6/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/*.transformed.kmc_*
+        """
+        
+
 
 # For sanity check
 
@@ -269,6 +282,9 @@ rule transform_union_to_set_exp_type_6:
      """
         kmc_tools transform unions_type_6/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined \
         set_counts 1 genome_sets_type_6/unions/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined.transformed
+
+        # Remove unions rest of set
+        rm {input[0]} {input[1]}
      """
 
 # Section 3.5: Performs intersection
@@ -347,6 +363,10 @@ rule run_merge_list_exp_type_6:
         -o {base_dir}/accuracies_type_6/{wildcards.read_type}/ \
         -n {num_datasets} \
         -k {wildcards.k} \
+
+        # Remove text dumps for this k and read type
+        rm text_dump_type_6/k_{wildcards.k}/{wildcards.read_type}/intersection/pivot_*/pivot_*_intersect_dataset_*.txt
+        rm text_dump_type_6/k_{wildcards.k}/{wildcards.read_type}/pivot/pivot_*.txt
         """
 
 
