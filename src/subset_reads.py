@@ -2,6 +2,7 @@
 import argparse
 import os
 import random
+import time
 
 def main(args):
     input = open(args.input, "r")
@@ -17,11 +18,17 @@ def main(args):
             if(">" in input_lines[i]):
                 input_dict[input_lines[i]] = input_lines[i+1]
         # Chose and remove random read until reach kmer ceiling
-        while(entry_sum < args.num_included and len(input_lines) > 0):
-            rand_entry = random.choice(list(input_dict.keys()))
-            rand_seq = input_dict.pop(rand_entry,None)
-            output.write(rand_entry+"\n"+rand_seq+"\n")
-            entry_sum += len(rand_seq) - args.k + 1
+        batch_size = 10000
+        while entry_sum < args.num_included and len(input_dict) > 0:
+            if len(input_dict) < batch_size:
+                batch_size = len(input_dict)
+            rand_entry = random.sample (list(input_dict.keys()), batch_size)
+            curr_batch_id = 0
+            while entry_sum < args.num_included and len(input_dict) > 0 and curr_batch_id < batch_size:
+                rand_seq = input_dict.pop(rand_entry[curr_batch_id],None)
+                output.write(rand_entry[curr_batch_id]+"\n"+rand_seq+"\n")
+                entry_sum += len(rand_seq) - args.k + 1
+                curr_batch_id += 1
     elif(args.half_mems):
         print("Not implemented")
     elif(args.mems):
@@ -29,7 +36,7 @@ def main(args):
 
     print("Returned {entry_sum} kmers with requested {requested}".format(entry_sum = entry_sum, requested = args.num_included))
     # If entires requested greater than input
-    if(line_num == len(input_lines)):
+    if(len(input_dict) == 0):
         print("Error: Number of entries requested >= input entries ({entry_sum})".format(entry_sum=entry_sum))
         exit(1)
 
