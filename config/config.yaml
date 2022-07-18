@@ -1,7 +1,7 @@
 DATA_ROOT: "/home/ext-mcheng29/scratch16-blangme2/marie/subset_test"
 REPO_DIRECTORY: "/home/ext-mcheng29/khoice"
 RINDEX_BUILD_DIRECTORY: "/home/ext-mcheng29/r-index/build"
-NUM_DATASETS: 2
+NUM_DATASETS: 4
 EXP_TYPE: 6
 THRESHOLD: 15
 
