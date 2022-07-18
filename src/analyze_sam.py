@@ -22,8 +22,9 @@ def main(args):
     # a row in the confusion matrix
     for i in range(args.num_datasets):
         read_mappings = {}
+        read_set = set()
         print("\n[log] building a dictionary of the read alignments for pivot {pivot}".format(pivot = i + 1))
-
+        total_len = 0
         # Iterates through each alignment for this pivot to populate read mappings
         for j in range(args.num_datasets):
             curr_sam = (pysam.AlignmentFile(args.sam_dir+"pivot_{pivot}_align_dataset_{dataset}.sam".format(pivot = i + 1, dataset = j + 1), "r"))
@@ -33,19 +34,27 @@ def main(args):
                 if query_length >= args.t:
                     if read.query_name not in read_mappings:   
                         read_mappings[read.query_name] = [query_length]
+                        read_set.add(read.query_name)
+                        total_len+=len(read.query_sequence)
                     read_mappings[read.query_name].append(j)
             curr_sam.close()
+        print(len(read_set))
         
         #print(read_mappings)
+        total_len = 0
+        print(len(read_mappings))
         for key in read_mappings:
             mem_len = read_mappings[key][0]
+            if len(read_mappings[key])>3:
+                print(read_mappings[key])
             curr_set = set(read_mappings[key][1:])
+            total_len+=mem_len
             for dataset in curr_set:
                 if args.mems:
                     confusion_matrix[i][dataset] += 1/len(curr_set) * mem_len 
                 elif args.half_mems:
                     confusion_matrix[i][dataset] += 1/len(curr_set)
-        
+        print(total_len)
     
     # Create output file
     output_matrix = args.output_dir + "confusion_matrix.csv"
