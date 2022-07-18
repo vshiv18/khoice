@@ -2,15 +2,16 @@
 import argparse
 import os
 import random
-import time
 
 def main(args):
     input = open(args.input, "r")
     output = open(args.output,"w+")
     input_lines = [x.strip() for x in input.readlines()]
     entry_sum = 0
+    entry_type = ""
 
     if(args.kmers): 
+        entry_type="kmers"
         # Write kmers until over requested num
         # Build dictionary of headers and reads
         input_dict = {}
@@ -22,21 +23,59 @@ def main(args):
         while entry_sum < args.num_included and len(input_dict) > 0:
             if len(input_dict) < batch_size:
                 batch_size = len(input_dict)
-            rand_entry = random.sample (list(input_dict.keys()), batch_size)
+            rand_entries = random.sample (list(input_dict.keys()), batch_size)
             curr_batch_id = 0
             while entry_sum < args.num_included and len(input_dict) > 0 and curr_batch_id < batch_size:
-                rand_seq = input_dict.pop(rand_entry[curr_batch_id],None)
-                output.write(rand_entry[curr_batch_id]+"\n"+rand_seq+"\n")
+                rand_seq = input_dict.pop(rand_entries[curr_batch_id],None)
+                output.write(rand_entries[curr_batch_id]+"\n"+rand_seq+"\n")
                 entry_sum += len(rand_seq) - args.k + 1
                 curr_batch_id += 1
     elif(args.half_mems):
-        print("Not implemented")
+        entry_type="half mems"
+        input_dict = {}
+        for i in range(0,len(input_lines),4):
+            if(">" in input_lines[i]):
+                # Lazy way
+                input_dict[input_lines[i]] = [input_lines[i+1], input_lines[i+2], input_lines[i+3]]
+        batch_size = args.num_included
+        print("Dictionary Built...")
+        if(len(input_dict) < args.num_included):
+            batch_size = len(input_dict)
+        rand_entries = random.sample (list(input_dict.keys()), batch_size)
+        for entry in rand_entries: 
+            entry_sum+=1
+            output.write(entry+"\n")
+            for i in range(3):
+                output.write(input_dict[entry][i]+"\n")
     elif(args.mems):
-        print("Not implemented")
+        entry_type="bp of mems"
+        input_dict = {}
+        for i in range(0,len(input_lines),4):
+            if(">" in input_lines[i]):
+                # Lazy way
+                input_dict[input_lines[i]] = [input_lines[i+1], input_lines[i+2], input_lines[i+3]]
+        batch_size = args.num_included
+        print("Dictionary Built...")
 
-    print("Returned {entry_sum} kmers with requested {requested}".format(entry_sum = entry_sum, requested = args.num_included))
-    # If entires requested greater than input
-    if(len(input_dict) == 0):
+        batch_size = 10000
+        while entry_sum < args.num_included and len(input_dict) > 0:
+            if len(input_dict) < batch_size:
+                batch_size = len(input_dict)
+            rand_entries = random.sample (list(input_dict.keys()), batch_size)
+            curr_batch_id = 0
+            while entry_sum < args.num_included and curr_batch_id < batch_size:
+                rand_entry = rand_entries[curr_batch_id]
+                rand_seqs = input_dict.pop(rand_entry,None)
+                output.write(rand_entry+"\n")
+                for i in range(3):
+                    output.write(rand_seqs[i]+"\n")
+                
+                entry_sum += len(rand_seqs[0])
+                curr_batch_id += 1
+
+    print("Returned {entry_sum} {type} with requested {requested}".format(entry_sum = entry_sum, type = entry_type, requested = args.num_included))
+    # If entries requested greater than input
+    if(len(input_dict) == 0 or entry_sum == len(input_dict)):
         print("Error: Number of entries requested >= input entries ({entry_sum})".format(entry_sum=entry_sum))
         exit(1)
 
@@ -61,7 +100,7 @@ def check_arguments(args):
     if args.num_included < 1:
         print("Error: number of requested entries must be greater than 0")
         exit(1)
-    if args.k < 1:
+    if not args.k == None and args.k < 1:
         print("Error: k value must be greater than 0")
         exit(1)
     # Can only chose one option

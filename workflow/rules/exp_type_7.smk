@@ -58,6 +58,26 @@ def get_dataset_non_pivot_genomes_exp_7(wildcards):
                 input_files.append(f"non_pivot_type_7/dataset_{wildcards.num}/{file_name}.fna")
     return input_files
 
+def get_all_non_pivot_genomes_exp_7(wildcards):
+    """ Returns list of all non-pivot genomes """
+    input_files = []
+    if exp_type == 7:  
+        for i in range(1, num_datasets + 1):
+            for data_file in os.listdir(f"non_pivot_type_7/dataset_{i}/"):
+                if data_file.endswith(".fna"):
+                    file_name = data_file.split(".fna")[0]
+                    input_files.append(f"non_pivot_type_7/dataset_{i}/{file_name}.fna")
+    print(len(input_files))
+    return input_files
+
+def get_combined_ref_dataset_exp_7(wildcards):
+    """ Returns list of forward combined refs for each dataset """
+    input_files = []
+    if exp_type == 7:
+        for i in range(1, num_datasets + 1):
+            input_files.append(f"combined_type_7/dataset_{i}/combined_ref_forward.fna")
+    return input_files
+
 def get_python_input_exp_7(wildcards):
     """ Returns list of text files with reference names for each dataset AND all pivot SAM files for a read type """
     input_files = []
@@ -79,62 +99,35 @@ rule generate_raw_positive_short_reads_exp_7:
     input:
         "pivot_type_7/pivot_ref/pivot_{num}.fna"
     output:
-        "pivot_type_7/pivot_raw_reads/illumina/pivot_{num}.fq"
+        "ms_type_7/illumina/pivot_{num}/pivot_{num}.fna"
     shell:
         """
-        art_illumina -ss HS25 -i pivot_type_7/pivot_ref/pivot_{wildcards.num}.fna -na -l 150 -f 2.0 \
-        -o pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}
+        art_illumina -ss HS25 -i pivot_type_7/pivot_ref/pivot_{wildcards.num}.fna -na -l 150 -f 8.0 \
+        -o ms_type_7/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}
+
+        seqtk seq -a ms_type_7/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}.fq > {output}
         """
 
 rule generate_raw_positive_long_reads_exp_7:
     input:
         "pivot_type_7/pivot_ref/pivot_{num}.fna"
     output:
-        "pivot_type_7/pivot_raw_reads/ont/pivot_{num}.fastq"
-    shell:
-        """
-        pbsim --depth 30.0 --prefix pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num} \
-        --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 pivot_type_7/pivot_ref/pivot_{wildcards.num}.fna
-        
-        cat 'pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}'*.fastq > {output}
-        rm 'pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_'*.fastq
-        ls  'pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}'*.ref | xargs rm
-        ls  'pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}'*.maf | xargs rm
-        """
-
-rule convert_long_reads_to_fasta_and_subset_exp_7:
-    input:
-        "pivot_type_7/pivot_raw_reads/ont/pivot_{num}.fastq"
-    output:
         "ms_type_7/ont/pivot_{num}/pivot_{num}.fna"
     shell:
         """
-        num_lines=$(({num_reads_per_dataset} * 4))
-
-        head -n $num_lines {input} > pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq
-        seqtk seq -a pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq > {output}  
-        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi    
-        rm pivot_type_7/pivot_raw_reads/ont/pivot_{wildcards.num}_subset.fastq  
-        """
-
-rule convert_short_reads_to_fasta_and_subset_exp_7:
-    input:
-        "pivot_type_7/pivot_raw_reads/illumina/pivot_{num}.fq"
-    output:
-        "ms_type_7/illumina/pivot_{num}/pivot_{num}.fna"
-    shell:
-        """
-        num_lines=$(({num_reads_per_dataset} * 4))
-
-        head -n $num_lines {input} > pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq
-        seqtk seq -a pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq > {output}
-        if [ $(grep -c '>' {output}) != {num_reads_per_dataset} ]; then echo 'number of reads assertion failed.'; exit 1; fi
-        rm pivot_type_7/pivot_raw_reads/illumina/pivot_{wildcards.num}_subset.fq
+        pbsim --depth 8.0 --prefix ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num} \
+        --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 pivot_type_7/pivot_ref/pivot_{wildcards.num}.fna
+        
+        cat 'ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.fastq > ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq
+        seqtk seq -a ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq > {output}
+        rm 'ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num}_'*.fastq
+        ls  'ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.ref | xargs rm
+        ls  'ms_type_7/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.maf | xargs rm
         """
 
 # Section 3.2: Concatonating ALL reference genomes and reverse complements
 
-rule concat_ref_exp_7:
+rule concat_ref_dataset_exp_7:
     input:
         get_dataset_non_pivot_genomes_exp_7
     output:
@@ -142,7 +135,7 @@ rule concat_ref_exp_7:
     shell:
         "cat {input} > {output}"
 
-rule build_rev_comp_exp_7:
+rule build_rev_comp_dataset_exp_7:
     input:
         "combined_type_7/dataset_{num}/combined_ref_forward.fna"
     output:
@@ -150,7 +143,8 @@ rule build_rev_comp_exp_7:
     shell:
         "seqtk seq -r {input} | sed 's/^>/>revcomp_/' > {output}"
 
-rule concat_full_ref_exp_7:
+# Each dataset for ri-align
+rule concat_full_ref_dataset_exp_7:
     input:
         "combined_type_7/dataset_{num}/combined_ref_rcomp.fna",
         "combined_type_7/dataset_{num}/combined_ref_forward.fna"
@@ -159,39 +153,46 @@ rule concat_full_ref_exp_7:
     shell:
         "cat {input} > {output}"
 
+# All forward for all datasets for spumoni
+rule concat_full_ref_all_exp_7:
+    input:
+        get_combined_ref_dataset_exp_7
+    output:
+        "combined_type_7/combined_ref_forward.fna"
+    shell:
+        "cat {input} > {output}"
 
 # Section 3.3: Generate matching statistics for pivot reads
 
 rule spumoni_build_exp_7:
     input:
-        "combined_type_7/dataset_{num}/combined_ref_all.fna"
+        "combined_type_7/combined_ref_forward.fna"
     output:
-        "combined_type_7/dataset_{num}/spumoni_full_ref.fa"
+        "combined_type_7/spumoni_full_ref.fa"
     shell:
         # Only use forward for spumoni
-        "spumoni build -r combined_type_7/dataset_{wildcards.num}/combined_ref_forward.fna -M -n"
+        "spumoni build -r combined_type_7/combined_ref_forward.fna -M -n"
 
 rule spumoni_run_exp_7:
     input:
-        "combined_type_7/dataset_{num}/spumoni_full_ref.fa",
+        "combined_type_7/spumoni_full_ref.fa",
         "ms_type_7/{read_type}/pivot_{pivot}/pivot_{pivot}.fna"
     output:
-        "ms_type_7/{read_type}/pivot_{pivot}/pivot_{pivot}_align_dataset_{num}.fna.lengths"
+        "ms_type_7/{read_type}/pivot_{pivot}/pivot_{pivot}.fna.lengths"
     shell:
         """
-        spumoni run -r combined_type_7/dataset_{wildcards.num}/spumoni_full_ref.fa \
+        spumoni run -r combined_type_7/spumoni_full_ref.fa \
         -p ms_type_7/{wildcards.read_type}/pivot_{wildcards.pivot}/pivot_{wildcards.pivot}.fna -M -n 
-        mv ms_type_7/{wildcards.read_type}/pivot_{wildcards.pivot}/pivot_{wildcards.pivot}.fna.lengths {output}
         """
 
 # Section 3.3: Extract Half-Mems and Mems from pivot MS
 
 rule extract_mems_exp_7:
     input:
-        "ms_type_7/{read_type}/pivot_{pivot}/pivot_{pivot}_align_dataset_{num}.fna.lengths",
+        "ms_type_7/{read_type}/pivot_{pivot}/pivot_{pivot}.fna.lengths",
         "ms_type_7/{read_type}/pivot_{pivot}/pivot_{pivot}.fna"
     output:
-        "{mem_type}_type_7/{read_type}/pivot_{pivot}_align_dataset_{num}.fastq"
+        "{mem_type}_type_7/{read_type}/pivot_{pivot}.fastq"
     shell:
         """
         python3 {repo_dir}/src/extract_mems.py \
@@ -202,8 +203,21 @@ rule extract_mems_exp_7:
         -o {base_dir}/{output}
         """
 
+rule subset_mems_exp_7:
+    input:
+        "{mem_type}_type_7/{read_type}/pivot_{pivot}.fastq"
+    output:
+        "{mem_type}_type_7/{read_type}/pivot_{pivot}_subset.fastq"
+    shell:
+        """
+        python3 {repo_dir}/src/subset_reads.py \
+        -i {base_dir}/{input} \
+        -o {base_dir}/{output} \
+        --{wildcards.mem_type} \
+        -n {num_halfmems} \
+        """
 
-# Section 3.4: Build r-index
+# Section 3.4: Build r-index for each dataset
 
 rule ref_ri_build_fasta_exp_7:
     input:
@@ -222,7 +236,7 @@ rule ref_ri_build_fasta_exp_7:
 rule ref_ri_align_exp_7:
     input:
         "combined_type_7/dataset_{num}/combined_ref_all.fna",
-        "{mem_type}_type_7/{read_type}/pivot_{pivot}_align_dataset_{num}.fastq",
+        "{mem_type}_type_7/{read_type}/pivot_{pivot}_subset.fastq",
         "combined_type_7/dataset_{num}/combined_ref_all.fna.ri"
         
     output:
@@ -233,7 +247,6 @@ rule ref_ri_align_exp_7:
         ri-align -m 1 locate {base_dir}/{input[0]} {base_dir}/{input[1]} \
         > {base_dir}/{output}
         """
-
 
 ### EDIT BELOW FOR -M 1
 
