@@ -7,10 +7,7 @@ def main(args):
     input = open(args.input, "r")
     output = open(args.output,"w+")
     input_lines = [x.strip() for x in input.readlines()]
-    line_num = 0
     entry_sum = 0
-
-
 
     if(args.kmers): 
         # Write kmers until over requested num
@@ -19,11 +16,10 @@ def main(args):
         for i in range(0,len(input_lines),2):
             if(">" in input_lines[i]):
                 input_dict[input_lines[i]] = input_lines[i+1]
-                
-        # Chose random read until reach kmer ceiling
-        while(entry_sum < args.num_included and line_num < len(input_lines)):
+        # Chose and remove random read until reach kmer ceiling
+        while(entry_sum < args.num_included and len(input_lines) > 0):
             rand_entry = random.choice(list(input_dict.keys()))
-            rand_seq = input_dict[rand_entry]
+            rand_seq = input_dict.pop(rand_entry,None)
             output.write(rand_entry+"\n"+rand_seq+"\n")
             entry_sum += len(rand_seq) - args.k + 1
     elif(args.half_mems):
