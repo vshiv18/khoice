@@ -65,20 +65,19 @@ def main(args):
         curr_pivot_num += 1 
 
     # Print out confusion matrix to a csv file
-    output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.csv"
+    output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.txt"
     with open(output_matrix,"w+") as csvfile:
         writer = csv.writer(csvfile)
         for row in confusion_matrix:
             writer.writerow(row)
     
-    # Calculate accuracy and print to csv file (k, pivot_1, ... pivot_n)
-    accuracies = [args.k]
-    for score in calculate_accuracy(confusion_matrix,num_datasets):
-        accuracies.append(score)
-    output_acc = args.output_path + "accuracy/k_"+ args.k +"_accuracy.csv"
+    # Calculate accuracy values and print to csv file (k, dataset #, TP, TN, FP, FN)
+    
+    output_acc = args.output_path + "values/k_"+ args.k +"_accuracy_values.csv"
     with open(output_acc, "w+") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(accuracies)
+        for score in calculate_accuracy_values(confusion_matrix,num_datasets):
+            writer.writerow(score)
 
 
 
@@ -128,8 +127,8 @@ def update_dictionary(pivot_dict, intersect_path, intersect_num, num_datasets):
                 pivot_dict[kmer].append(intersect_num % num_datasets)
     return pivot_dict
 
-def calculate_accuracy(confusion_matrix, num_datasets):
-    """ Calculates accuracy score given confusion matrix """
+def calculate_accuracy_values(confusion_matrix, num_datasets):
+    """ Calculates accuracy values given confusion matrix [TP TN FP FN] """
     accuracies = []
     for pivot in range(num_datasets):
         tp = confusion_matrix[pivot][pivot]
@@ -143,7 +142,7 @@ def calculate_accuracy(confusion_matrix, num_datasets):
                     fn += curr
                 elif(row != pivot):
                     tn += curr
-        accuracies.append((tp + tn)/(tp + tn + fp + fn))
+        accuracies.append([args.k,pivot,tp,tn,fp,fn])
     return accuracies
 
 if __name__ == "__main__":

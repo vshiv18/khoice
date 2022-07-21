@@ -1,9 +1,11 @@
 ####################################################
 # Name: exp_type_1.smk
 # Description: Contains functions and rules for
-#              the type of experiment type 1: this
-#              type is where we generally look at the
-#              kmer set across and within groups.
+#              the type of experiment type 1:
+#
+#              Takes the entire kmer set of different species 
+#              and compares them to each other to see what 
+#              proportion of k-mers are unique to some extent.
 #
 # Date: 2/3/22
 ####################################################

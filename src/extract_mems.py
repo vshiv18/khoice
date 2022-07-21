@@ -23,24 +23,23 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
             random_quality = "#" * write_mem_length
             curr_half_mem = curr_seq[i:i+write_mem_length]
 
-            out_file.write(f">half_mem_{curr_seq_id}_length_{write_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
+            out_file.write(f">halfmem_{curr_seq_id}_length_{write_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
             curr_seq_id += 1
     return curr_seq_id
 
 def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
     # Print first mem
     curr_mem_length = lengths_array[0]
-    write_mem_length = curr_mem_length
-    if curr_mem_length >= 1000:
-        write_mem_length = 1000
-    random_quality = "#" * write_mem_length
-    curr_mem = curr_seq[0:write_mem_length]
-    out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
-    curr_seq_id += 1
-    capped = 0
+    if(curr_mem_length >= threshold):
+        write_mem_length = curr_mem_length
+        if curr_mem_length >= 1000:
+            write_mem_length = 1000
+        random_quality = "#" * write_mem_length
+        curr_mem = curr_seq[0:write_mem_length]
+        out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
+        curr_seq_id += 1
 
     for i in range(1, len(curr_seq)):
-        #print(lengths_array[i])
         prev_mem_length = lengths_array[i - 1]
         curr_mem_length = lengths_array[i]
         if curr_mem_length >= threshold:
@@ -115,7 +114,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Takes in matching statistic lengths, and extracts either half-mems or mems, prints to stdout.")
     parser.add_argument("-l", dest="length_file", help="path to matching statistic length file", required=True)
     parser.add_argument("-p", dest="pattern_file", help="path to pattern file that correspond to the matching statistics.", required=True)
-    parser.add_argument("--half-mems", action="store_true", default=False, dest="half_mems", help="extract half-mems and print to stdout")
+    parser.add_argument("--half_mems", action="store_true", default=False, dest="half_mems", help="extract half-mems and print to stdout")
     parser.add_argument("--mems", action="store_true", default=False, dest="mems", help="extract mems and print to stdout (it can either be mems or half-mems, not both)")
     parser.add_argument("-t", dest="threshold", default=0, type=int, help="threshold for half-mem length to use")
     parser.add_argument("-o", dest="output_file", help="path to output file", required=True)
