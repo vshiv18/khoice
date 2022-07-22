@@ -14,7 +14,7 @@ library(tidyr)
 library(dplyr)
 library(gridExtra)
 library(grid)
-install.packages('gridExtra')
+
 
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
@@ -40,18 +40,18 @@ make_recall_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
           geom_ribbon(aes(x=k, ymin=minus_sd, ymax=plus_sd, fill = read_type),
                 alpha=0.2, colour = NA) +
           geom_line(aes(x = k, y = avg, color = read_type, linetype = "Kmer"), size=1.0) +
-          geom_hline(aes(yintercept=avg, linetype="Half-MEM", color=read_type), data = hm, size=1.0) +
-          geom_hline(aes(yintercept=avg, linetype="MEM", color=read_type), data = m, size=1.0) +
+          #geom_hline(aes(yintercept=avg, linetype="Half-MEM", color=read_type), data = hm, size=1.0) +
+          #geom_hline(aes(yintercept=avg, linetype="MEM", color=read_type), data = m, size=1.0) +
           theme_bw() +
           theme(plot.title=element_text(hjust = 0.5, size=14),
           axis.title.x=element_text(size =14),
           axis.title.y=element_text(size=14),
-          legend.position = "bottom", 
+          legend.position = "none",
           legend.text=element_text(size=14),
           legend.box="horizontal",
           legend.title=element_text(size=12),
           axis.text=element_text(size=12, color="black")) +
-          scale_y_continuous(breaks=seq(0, 1.0, 0.1)) +
+          #scale_y_continuous(breaks=seq(0, 1.0, 0.1)) +
           scale_x_continuous(breaks = seq(5, 50, 5)) +
           labs(title = plot_title,
                x = "Kmer length (k)",
@@ -61,13 +61,37 @@ make_recall_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
                                 values = c("Kmer"="solid","Half-MEM"= "dashed", "MEM"= "dotted")) +
           scale_color_discrete(name = "", labels = c("Long Read", "Short Read")) +
           guides(fill = "none", color = guide_legend(nrow = 1))  
-          #theme(plot.margin = margin(t = 20,  # Top margin
-          #                          r = 50,  # Right margin
-          #                          b = 40,  # Bottom margin
-          #                          l = 10)) # Left margin)
+          #theme(plot.margin = margin(t = 0,  # Top margin
+          #                           r = 0,  # Right margin
+          #                           b = 0,  # Bottom margin
+          #                           l = 0)) # Left margin)
 
   return(plot)
 }
+
+make_recall_bar_chart_sd <- function(dataset_name, mem_df) {
+  plot <- ggplot(mem_df, aes(fill=read_type, y=avg, x=mem_type)) + 
+          geom_bar(position=position_dodge(), stat="identity", color="black", width=0.75, size=0.75) +
+          geom_errorbar(aes(ymin=minus_sd, ymax=plus_sd, group=interaction(mem_type, read_type)), width=.2, position=position_dodge(0.9), size=0.5) +
+          theme_classic() +
+          theme(plot.title=element_text(hjust = 0.5, size=14),
+                axis.title.x=element_text(size =14),
+                axis.title.y=element_blank(),
+                axis.text.y=element_blank(),
+                axis.ticks.y=element_blank(),
+                axis.line.y=element_blank(),
+                legend.position = "bottom", 
+                legend.text=element_text(size=14),
+                legend.box="horizontal",
+                legend.title=element_text(size=12),
+                axis.text=element_text(size=12, color="black")) +           
+          labs(title = "", x = "", y = "Recall") + 
+          scale_fill_discrete(name = "", labels = c("Long Read", "Short Read")) +
+          scale_x_discrete(name="", labels=c("Half-MEM", "MEM"))
+    
+  return(plot)
+}
+
 
 g_legend<-function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
@@ -178,24 +202,42 @@ plot_list = list()
 
 for(dataset in 0:(length(dataset_names)-1)){
   print(dataset)
+  
+  # Build the dataframes for kmers/half-mems and mems
   kmer_dataset_df = recall_df[recall_df$dataset == as.character(dataset),]
   mem_dataset_df = mem_recall_df[mem_recall_df$dataset == as.character(dataset),]
-  temp_plot <- make_recall_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
-  plot_list[[dataset + 1]]<- temp_plot
+  
+  # Build the ribbon and bar chart
+  temp_plot1 <- make_recall_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
+  temp_plot2 <- make_recall_bar_chart_sd(dataset_names[dataset+1], mem_dataset_df)
+  mylegend <- get_legend(temp_plot2)
+
+  # Determine the y-axis range we want to keep the plots on same scale
+  max_value <- max(max(kmer_dataset_df["plus_sd"]), max(mem_dataset_df["plus_sd"]))
+  max_value <- ceiling(max_value/0.10)*0.10
+  min_value <- 0.0
+
+  limits <- c(min_value, max_value)
+  breaks <- seq(limits[1], limits[2], by=.1)
+  
+  # Place the same y-axis in both plots
+  temp_plot1 <- temp_plot1 + scale_y_continuous(limits=limits, breaks=breaks)
+  temp_plot2 <- temp_plot2 + scale_y_continuous(limits=limits, breaks=breaks)
+  plot_list[[dataset + 1]] <- ggarrange(temp_plot1, temp_plot2 + theme(legend.position="none"), ncol=2, widths=c(2,0.85))
 }
+
 
 # Combining plots
 final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_list[[4]],
-                        labels = c("a", "b", "c", "d"), ncol = 2, nrow = 2,
-                        common.legend = TRUE, legend = "bottom")
+                        labels = c("a", "b", "c", "d"), ncol = 2, nrow = 2, legend.grob=mylegend, legend="bottom")
 print(final_plot)
 
 # Saving plots: a vector and non-vector graphic
-output_name <- paste(mem_working_dir, "combined_plot_v2.jpeg", sep="")
-ggsave(output_name, plot=final_plot, dpi=800, device="jpeg", width=10, height=8)
+output_name <- paste(mem_working_dir, "combined_plot_v3.jpeg", sep="")
+ggsave(output_name, plot=final_plot, dpi=800, device="jpeg", width=11, height=8)
 
-output_name <- paste(mem_working_dir, "combined_plot_v2.pdf", sep="")
-ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=10, height=8)
+output_name <- paste(mem_working_dir, "combined_plot_v3.pdf", sep="")
+ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=11, height=8)
 
 
 # Manually creating plots
