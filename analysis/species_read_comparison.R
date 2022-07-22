@@ -126,6 +126,7 @@ recall_df["plus_sd"] = recall_df["avg"] + recall_df["sd"]
 #######################################################################
 
 mem_working_dir <- "/Users/omarahmed/Downloads/raw_data/b_mem_trials/"
+#mem_working_dir <- "/Users/mwche/Downloads/b_mem_trials/"
 mem_values_files <- list.files(path=mem_working_dir,pattern = "\\.csv$")
 mem_col_names <- c("dataset","TP","TN","FP","FN")
 
