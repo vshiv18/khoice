@@ -24,7 +24,7 @@ dataset_names <- c("B. Cereus", "B. Anthracis", "B. Thuringiensis", "B. Weihenst
 #dataset_names <- c("E. Coli", "Salmonella")
 
 #working_dir <- "/Users/mwche/Downloads/exp6_bacillus/"
-working_dir <- "/Users/omarahmed/downloads/raw_data/b_subset_trials/"
+working_dir <- "/Users/mwche/Downloads/b_subset_trials/"
 
 ########################################################################
 # Methods for generating accuracy plot
@@ -71,8 +71,8 @@ make_recall_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
 
 make_recall_bar_chart_sd <- function(dataset_name, mem_df) {
   plot <- ggplot(mem_df, aes(fill=read_type, y=avg, x=mem_type)) + 
-          geom_bar(position=position_dodge(), stat="identity", color="black", width=0.75, size=0.75) +
-          geom_errorbar(aes(ymin=minus_sd, ymax=plus_sd, group=interaction(mem_type, read_type)), width=.2, position=position_dodge(0.9), size=0.5) +
+          geom_bar(position="dodge", stat="identity", color="black", width=0.75, size=0.75) +
+          geom_errorbar(aes(ymin=minus_sd, ymax=plus_sd, group=interaction(mem_type, read_type)), width=.2, position=position_dodge(0.75), size=0.5) +
           theme_classic() +
           theme(plot.title=element_text(hjust = 0.5, size=14),
                 axis.title.x=element_text(size =14),
@@ -149,8 +149,8 @@ recall_df["plus_sd"] = recall_df["avg"] + recall_df["sd"]
 # WRANGLE MEM DATA
 #######################################################################
 
-mem_working_dir <- "/Users/omarahmed/Downloads/raw_data/b_mem_trials/"
-#mem_working_dir <- "/Users/mwche/Downloads/b_mem_trials/"
+#mem_working_dir <- "/Users/omarahmed/Downloads/raw_data/b_mem_trials/"
+mem_working_dir <- "/Users/mwche/Downloads/b_mem_trials/"
 mem_values_files <- list.files(path=mem_working_dir,pattern = "\\.csv$")
 mem_col_names <- c("dataset","TP","TN","FP","FN")
 
@@ -210,6 +210,8 @@ for(dataset in 0:(length(dataset_names)-1)){
   # Build the ribbon and bar chart
   temp_plot1 <- make_recall_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
   temp_plot2 <- make_recall_bar_chart_sd(dataset_names[dataset+1], mem_dataset_df)
+  
+  print(temp_plot2)
   mylegend <- get_legend(temp_plot2)
 
   # Determine the y-axis range we want to keep the plots on same scale
