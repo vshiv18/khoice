@@ -8,23 +8,27 @@
 from distutils.command.config import config
 import os
 import argparse
+import math
 import csv
 import pysam
 
 def main(args):
     # Set up confusion matrix and reference list
     confusion_matrix = [[0 for i in range(args.num_datasets)] for j in range(args.num_datasets)]
-    # Create list of references for each dataset
-    #ref_lists = build_refs_list(args.ref_dir, args.num_datasets))
+    if(args.mems):
+        with open(args.text, 'r') as fp:
+            text_length = fp.readline()
+            noise = math.log(int(text_length),4)
+    
+    print(f"Noise: {noise}")
     
 
     # Go through alignments for each pivot individually - corresponds to 
     # a row in the confusion matrix
     for i in range(args.num_datasets):
         read_mappings = {}
-        read_set = set()
         print("\n[log] building a dictionary of the read alignments for pivot {pivot}".format(pivot = i + 1))
-        total_len = 0
+        input_entries = 0
         # Iterates through each alignment for this pivot to populate read mappings
         for j in range(args.num_datasets):
             curr_sam = (pysam.AlignmentFile(args.sam_dir+"pivot_{pivot}_align_dataset_{dataset}.sam".format(pivot = i + 1, dataset = j + 1), "r"))
@@ -32,33 +36,54 @@ def main(args):
                 query_length = int(read.query_name.split("_")[3])
                 # Only uses reads above threshold
                 if query_length >= args.t:
-                    if read.query_name not in read_mappings:   
-                        read_mappings[read.query_name] = [query_length]
-                        read_set.add(read.query_name)
-                        total_len+=len(read.query_sequence)
-                    read_mappings[read.query_name].append(j)
+                    if args.mems: # MEMs subtract null noise, don't add to map if under noise
+                        if(query_length - noise >= 0):
+                            if query_length < 50: 
+                                if read.query_name not in read_mappings:
+                                    read_mappings[read.query_name] = [query_length - noise]
+                                    input_entries+=len(read.query_sequence) - noise
+                                read_mappings[read.query_name].append(j)
+                            else:
+                                if read.query_name not in read_mappings:
+                                    read_mappings[read.query_name] = [query_length]
+                                    input_entries+=len(read.query_sequence)
+                                read_mappings[read.query_name].append(j)
+                        #if read.query_name not in read_mappings:  
+                        #    read_mappings[read.query_name] = [query_length]
+                        #    input_entries += query_length
+                        #read_mappings[read.query_name].append(j)
+                    elif args.half_mems:
+                        if read.query_name not in read_mappings:  
+                            read_mappings[read.query_name] = [query_length]
+                            input_entries+=1
+                        read_mappings[read.query_name].append(j)
             curr_sam.close()
-        print(len(read_set))
-        
+        print("Received {num}".format(num=input_entries))
         #print(read_mappings)
-        total_len = 0
-        print(len(read_mappings))
+        total_entries = 0
+        ceiling = args.cap
+        
+        # Populate confusion matrix and count entries
         for key in read_mappings:
             mem_len = read_mappings[key][0]
-            if len(read_mappings[key])>3:
-                print(read_mappings[key])
             curr_set = set(read_mappings[key][1:])
-            total_len+=mem_len
+            if args.mems:
+                total_entries+=mem_len
+            elif args.half_mems:
+                total_entries+=1
             for dataset in curr_set:
                 if args.mems:
-                    confusion_matrix[i][dataset] += 1/len(curr_set) * mem_len 
+                    confusion_matrix[i][dataset] += 1/len(curr_set) * mem_len * mem_len
                 elif args.half_mems:
                     confusion_matrix[i][dataset] += 1/len(curr_set)
-        print(total_len)
+            if(total_entries >= ceiling):
+                break
+        print("Returned {num}".format(num = total_entries))
+        assert total_entries >= ceiling, "assertion failed: not enough entries to reach cap."
     
     # Create output file
     output_matrix = args.output_dir + "confusion_matrix.csv"
-    output_values = args.output_dir + "accuracy_values.csv"
+    output_values = args.output_dir + "accuracy_values.csv" 
     
     # Write confusion matrix to output csv
     with open(output_matrix,"w+") as csvfile:
@@ -79,11 +104,13 @@ def parse_arguments():
                                                  "in order to form a confusion matrix.")
     parser.add_argument("-n", "--num", dest="num_datasets", required=True, help="number of datasets in this experiment", type=int)
     parser.add_argument("-s", "--sam_file", dest="sam_dir", required=True, help="path to directory with SAM files to be analyzed")
-    #parser.add_argument("-r", "--ref_lists", dest="ref_dir", required=True, help="path to directory with dataset reference lists")
     parser.add_argument("-o", "--output_path", dest = "output_dir", required=True, help="path to directory for output matrix and accuracies")
+    parser.add_argument("-c","--cap", dest = "cap", required=True, help = "number of entries to cap in the confusion matrix", type = int)
     parser.add_argument("--half_mems", action="store_true", default=False, dest="half_mems", help="sam corresponds to half-mems")
     parser.add_argument("--mems", action="store_true", default=False, dest="mems", help="sam corresponds to mems (it can either be mems or half-mems, not both)")
+
     parser.add_argument("-t", "--threshold", dest = "t", required=False, default=0, help="optional threshold value for experiment 8", type = int)
+    parser.add_argument("-l", "--length-text", dest = "text", required=False, default="", help="path to .fai file with total reference length")
     args = parser.parse_args()
     return args
 
@@ -92,17 +119,16 @@ def check_arguments(args):
     if(not os.path.isdir(args.sam_dir)):
         print("Error: sam directory does not exist.")
         exit(1)
-    #if(not os.path.isdir(args.ref_dir)):
-    #    print("Error: reference list directory does not exist.")
-    #    exit(1)
-    if(not os.path.isdir(args.output_dir)):
-        print("Error: output directory does not exist.")
-        exit(1)
     if(args.num_datasets < 1):
-        print("Error: number of datasets must be a positive integer")
+        print("Error: number of datasets must be greater than 0")
+    if(args.cap < 1):
+        print("Error: number of entries to cap must be greater than 0")
     # Verify only one of the options are chosen: half-mems or mems
     if (args.half_mems and args.mems) or (not args.half_mems and not args.mems):
         print("Error: exactly one type needs to be chosen (--half-mems or --mems)")
+        exit(1)
+    if(args.half_mems and args.text == ""):
+        print("Error: length of text must be specified when using MEMs")
         exit(1)
 
 def calculate_accuracy_values(confusion_matrix, num_datasets):
