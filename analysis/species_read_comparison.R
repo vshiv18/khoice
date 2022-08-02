@@ -1,9 +1,10 @@
 #####################################################
-# Name: kmer_plots_type_6.R
-# Description: Plots accuracy across values of k for
-# short and long simulated reads
+# Name: species_read_comparison.R
+# Description: Generates line/bar plot pairing
+#              to compare f1 of kmers/half-MEM/MEMs
+#              Originally planned for Section 3
 #
-# Date: July 5, 2022
+# Date: August 2, 2022
 #
 #####################################################
 
@@ -12,29 +13,28 @@ library(ggpubr)
 library(data.table)
 library(tidyr)
 library(dplyr)
-library(gridExtra)
-library(grid)
-
 
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 #######################################################################
 
-dataset_names <- c("B. Cereus", "B. Anthracis", "B. Thuringiensis", "B. Weihenstephanensis")
-#dataset_names <- c("E. Coli", "Salmonella")
+dataset_names <- c("B. Cereus", "B. Subtilis", "B. Weihenstephanensis")
 
-#working_dir <- "/Users/mwche/Downloads/exp6_bacillus/"
-working_dir <- "/Users/mwche/Downloads/b_subset_trials/"
+working_dir <- "/Users/mwche/Downloads/kmer_bacillus_trials/"
+# Kmer working dir should contain csv files with "long"/"short" in title (2 per trial)
+# MEM working dir should contain csv files with "long"/"short" AND "hm"/"m" in title (4 per trial)
 
 ########################################################################
 # Methods for generating accuracy plot
 ########################################################################
 
-make_recall_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
-  hm = mem_df[mem_df$mem_type == 'half_mem', ]
-  m = mem_df[mem_df$mem_type == 'mem', ]
+make_f1_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
+  # Makes line plot of kmer read f1 across k, FOR A SINGULAR SPECIES DATASET
   
-  #plot_title = paste(dataset_name,"Pivot")
+  # Commented out plots MEM/half-MEMS as horizontal lines
+  
+  #hm = mem_df[mem_df$mem_type == 'half_mem', ]
+  #m = mem_df[mem_df$mem_type == 'mem', ]
   plot_title <- dataset_name
   plot <- ggplot(kmer_df, aes(color = read_type)) +
           geom_ribbon(aes(x=k, ymin=minus_sd, ymax=plus_sd, fill = read_type),
@@ -51,25 +51,44 @@ make_recall_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
           legend.box="horizontal",
           legend.title=element_text(size=12),
           axis.text=element_text(size=12, color="black")) +
-          #scale_y_continuous(breaks=seq(0, 1.0, 0.1)) +
           scale_x_continuous(breaks = seq(5, 50, 5)) +
           labs(title = plot_title,
                x = "Kmer length (k)",
-               y = "Recall") +
-          scale_linetype_manual(name = "",
-                                breaks = c("Kmer","Half-MEM", "MEM"), 
-                                values = c("Kmer"="solid","Half-MEM"= "dashed", "MEM"= "dotted")) +
+               y = "F1") +
+          #scale_linetype_manual(name = "",
+          #                      breaks = c("Kmer","Half-MEM", "MEM"), 
+          #                      values = c("Kmer"="solid","Half-MEM"= "dashed", "MEM"= "dotted")) +
           scale_color_discrete(name = "", labels = c("Long Read", "Short Read")) +
           guides(fill = "none", color = guide_legend(nrow = 1))  
-          #theme(plot.margin = margin(t = 0,  # Top margin
-          #                           r = 0,  # Right margin
-          #                           b = 0,  # Bottom margin
-          #                           l = 0)) # Left margin)
 
   return(plot)
 }
 
-make_recall_bar_chart_sd <- function(dataset_name, mem_df) {
+make_f1 <- function(kmer_df, dataset_names){
+  # Makes line plot of kmer read f1 across k, FOR ALL DATASETS ON ONE 
+  
+  plot <- ggplot(kmer_df, aes(group = interaction(read_type, dataset), color = dataset)) +
+    geom_line(aes(x = k, y = f1, linetype = read_type), size=1.0) +
+    theme_bw() +
+    theme(plot.title=element_text(hjust = 0.5, size=14, face="bold"),
+          axis.title.x=element_text(size =14),
+          axis.title.y=element_text(size=14),
+          legend.position = "bottom", 
+          legend.text=element_text(size=12),
+          legend.box="vertical",
+          legend.title=element_text(size=12),
+          axis.text=element_text(size=12, color="black")) +
+    scale_x_continuous(breaks = seq(5, 50, 5)) +
+    labs(x = "Kmer length (k)",
+         y = "f1") +
+    scale_color_discrete(name = "", labels = dataset_names)
+  return(plot)
+}
+
+
+make_f1_bar_chart_sd <- function(dataset_name, mem_df) {
+  # Makes bar chart of half-MEM/MEM f1 for read types
+  
   plot <- ggplot(mem_df, aes(fill=read_type, y=avg, x=mem_type)) + 
           geom_bar(position="dodge", stat="identity", color="black", width=0.75, size=0.75) +
           geom_errorbar(aes(ymin=minus_sd, ymax=plus_sd, group=interaction(mem_type, read_type)), width=.2, position=position_dodge(0.75), size=0.5) +
@@ -93,12 +112,6 @@ make_recall_bar_chart_sd <- function(dataset_name, mem_df) {
 }
 
 
-g_legend<-function(a.gplot){
-  tmp <- ggplot_gtable(ggplot_build(a.gplot))
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  legend <- tmp$grobs[[leg]]
-  return(legend)}
-
 ############################################################################
 # Start of the main method of code ...
 ############################################################################
@@ -107,15 +120,17 @@ g_legend<-function(a.gplot){
 # WRANGLE KMER DATA
 #######################################################################
 
+# Get all csv files from working directory
 values_files <- list.files(path=working_dir, pattern = "\\.csv$")
 col_names <- c("k","dataset","TP","TN","FP","FN")
 
 value_df_list = list()
 
+# Wrangle each csv and add to list
 for(i in seq_along(values_files)){
   print(values_files[i])
   
-  # Read in dataframe, and annotate with name
+  # Read in csv and annotate with name and dataset
   temp_df = read.csv(file = paste(working_dir,values_files[i], sep = ""),header = FALSE)
   colnames(temp_df) <- col_names
   temp_df[,"dataset"] <- as.factor(temp_df[,"dataset"])
@@ -128,44 +143,45 @@ for(i in seq_along(values_files)){
     temp_df[,"read_type"] <-"long"
   }
   
-  # Calculate recall and precision
+  # Calculate recall, precision and f1
   temp_df["recall"] = (temp_df["TP"])/(temp_df["TP"] + temp_df["FN"])
   temp_df["precision"] = (temp_df["TP"])/(temp_df["TP"] + temp_df["FP"])
-  value_df_list[[values_files[i]]] <- temp_df
+  temp_df["f1"] = (2 * temp_df["recall"] * temp_df["precision"] / (temp_df["precision"] + temp_df["recall"]))
+  value_df_list[[mem_values_files[i]]] <- temp_df
 }
 
+# Merge list to mega-df
 merge_df <- Reduce(function(x, y) merge(x, y, all=TRUE), value_df_list)
 
-
-# Aggregate mean, min and max of precision for each k
-
-recall_df <- merge_df %>%
+# Summarize merged df with avg, sd, +/- sd
+f1_df <- merge_df %>%
   group_by(k,read_type,dataset) %>%
-  summarise_at(vars(recall), list(avg = mean, min = min, max = max, sd = sd)) 
-recall_df["minus_sd"] = recall_df["avg"] - recall_df["sd"]
-recall_df["plus_sd"] = recall_df["avg"] + recall_df["sd"]
+  summarise_at(vars(f1), list(avg = mean, min = min, max = max, sd = sd))  %>%
+  mutate(minus_sd = if_else(avg - sd < 0, 0, avg - sd),
+         plus_sd = if_else(avg + sd > 1, 1, avg + sd))
 
 #######################################################################
 # WRANGLE MEM DATA
 #######################################################################
 
-#mem_working_dir <- "/Users/omarahmed/Downloads/raw_data/b_mem_trials/"
-mem_working_dir <- "/Users/mwche/Downloads/b_mem_trials/"
+# Get all csv files from working directory
+mem_working_dir <- "/Users/mwche/Downloads/mem_bacillus_trials_3/"
 mem_values_files <- list.files(path=mem_working_dir,pattern = "\\.csv$")
 mem_col_names <- c("dataset","TP","TN","FP","FN")
 
 mem_value_df_list = list()
 
+# Wrangle each csv and add to list
 for(i in seq_along(mem_values_files)){
   print(mem_values_files[i])
   
-  # Read in dataframe, and annotate with name
+  # Read in csv and annotate with name and dataset
   temp_df = read.csv(file = paste(mem_working_dir,mem_values_files[i], sep = ""),header = FALSE)
   colnames(temp_df) <- mem_col_names
   temp_df[,"dataset"] <- as.factor(temp_df[,"dataset"])
   temp_df[,'source_csv'] <-mem_values_files[[i]]
   
-  # Fill columns with read type
+  # Fill columns with read type and mem type
   if(grepl("short", mem_values_files[i],fixed = TRUE)){
     temp_df[,"read_type"] <-"short"
   }else{
@@ -177,21 +193,22 @@ for(i in seq_along(mem_values_files)){
     temp_df[,"mem_type"] <-"mem"
   }
   
-  # Calculate recall and precision
+  # Calculate recall, precision and f1
   temp_df["recall"] = (temp_df["TP"])/(temp_df["TP"] + temp_df["FN"])
   temp_df["precision"] = (temp_df["TP"])/(temp_df["TP"] + temp_df["FP"])
+  temp_df["f1"] = (2 * temp_df["recall"] * temp_df["precision"] / (temp_df["precision"] + temp_df["recall"]))
   mem_value_df_list[[mem_values_files[i]]] <- temp_df
 }
 
+# Merge list to mega-df
 mem_merge_df <- Reduce(function(x, y) merge(x, y, all=TRUE), mem_value_df_list)
 
-# Aggregate mean, min and max of recall for mem and read type
-
-mem_recall_df <- mem_merge_df %>%
+# Summarize merged df with avg, sd, +/- sd
+mem_f1_df <- mem_merge_df %>%
   group_by(mem_type,read_type,dataset) %>%
-  summarise_at(vars(recall), list(avg = mean, min = min, max = max, sd = sd)) 
-mem_recall_df["minus_sd"] = mem_recall_df["avg"] - mem_recall_df["sd"]
-mem_recall_df["plus_sd"] = mem_recall_df["avg"] + mem_recall_df["sd"]
+  summarise_at(vars(f1), list(avg = mean, min = min, max = max, sd = sd))  %>%
+  mutate(minus_sd = if_else(avg - sd < 0, 0, avg - sd),
+         plus_sd = if_else(avg + sd > 1, 1, avg + sd))
 
 #######################################################################
 # GENERATE PLOTS
@@ -204,21 +221,20 @@ for(dataset in 0:(length(dataset_names)-1)){
   print(dataset)
   
   # Build the dataframes for kmers/half-mems and mems
-  kmer_dataset_df = recall_df[recall_df$dataset == as.character(dataset),]
-  mem_dataset_df = mem_recall_df[mem_recall_df$dataset == as.character(dataset),]
+  kmer_dataset_df = f1_df[f1_df$dataset == as.character(dataset),]
+  mem_dataset_df = mem_f1_df[mem_f1_df$dataset == as.character(dataset),]
   
   # Build the ribbon and bar chart
-  temp_plot1 <- make_recall_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
-  temp_plot2 <- make_recall_bar_chart_sd(dataset_names[dataset+1], mem_dataset_df)
+  temp_plot1 <- make_f1_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
+  temp_plot2 <- make_f1_bar_chart_sd(dataset_names[dataset+1], mem_dataset_df)
   
-  print(temp_plot2)
   mylegend <- get_legend(temp_plot2)
-
+  
   # Determine the y-axis range we want to keep the plots on same scale
   max_value <- max(max(kmer_dataset_df["plus_sd"]), max(mem_dataset_df["plus_sd"]))
   max_value <- ceiling(max_value/0.10)*0.10
   min_value <- 0.0
-
+  
   limits <- c(min_value, max_value)
   breaks <- seq(limits[1], limits[2], by=.1)
   
@@ -230,37 +246,15 @@ for(dataset in 0:(length(dataset_names)-1)){
 
 
 # Combining plots
-final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_list[[4]],
-                        labels = c("a", "b", "c", "d"), ncol = 2, nrow = 2, legend.grob=mylegend, legend="bottom")
+final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]],
+                        labels = c("a", "b", "c"), ncol = 2, nrow = 2, legend.grob=mylegend, legend="bottom")
 print(final_plot)
 
 # Saving plots: a vector and non-vector graphic
-output_name <- paste(mem_working_dir, "combined_plot_v3.jpeg", sep="")
+output_name <- paste(mem_working_dir, "combined_plot_v8.jpeg", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="jpeg", width=11, height=8)
 
-output_name <- paste(mem_working_dir, "combined_plot_v3.pdf", sep="")
+output_name <- paste(mem_working_dir, "combined_plot_v8.pdf", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=11, height=8)
-
-
-# Manually creating plots
-#dataset = 0
-#kmer_dataset_df = recall_df[recall_df$dataset == as.character(dataset),]
-#mem_dataset_df = mem_recall_df[mem_recall_df$dataset == as.character(dataset),]
-#p1 <- make_recall_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
-
-#print(p4)
-
-# Arranging plots
-#mylegend<-g_legend(p1)
-#p <- grid.arrange(arrangeGrob(p1 + theme(legend.position="none"),
-#                         p2 + theme(legend.position="none"),
-#                         p3 + theme(legend.position="none"),
-#                         p4 + theme(legend.position="none"),
-#                         nrow=2),
-#                        mylegend, nrow=2,heights=c(10, 1),
-#                  top = textGrob("Classification Recall w.r.t Out-Pivot",gp=gpar(fontsize=20)))
-
-#output_name <- paste(mem_working_dir, "combined_plot_v1.png", sep="")
-#ggsave(output_name, plot=p, dpi=800, device="jpeg", width=12, height=10)
 
 
