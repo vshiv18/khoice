@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+################################################################################
 # Name: download_genomes.py 
 # Description: This is a python script that will allow you to request certain
 #              groups of genomes from NCBI databases like RefSeq and GenBank.
 #
 # Date: January 8th, 2022
+################################################################################
 
 import argparse
 import os
@@ -17,7 +19,8 @@ def run_command(command, loading_bar, sleep_time=1):
     some time to run like queries to databases or downloading genomes.
     """
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    
+    loading_bar = False # Omar - set to False since it was leading to errors
+
     if loading_bar:
         print("Loading ...", end='', flush="True")
         while process.poll() is None:
@@ -25,7 +28,6 @@ def run_command(command, loading_bar, sleep_time=1):
             print(".", end='', flush="True")
             (output, error) = process.communicate()
         (output, error) = process.communicate()
-        print()
     else:
         (output, error) = process.communicate()
 
@@ -67,7 +69,7 @@ def find_refseq_ftp_paths(requested_species, using_file_input):
     else:
         print(f"\nError occurred during database query: {output}")
         exit(1)
-
+    
     current_command = command.format(requested_species, requested_species)
     output, error = run_command(current_command, False)
     output_lines = output.split("\n")
@@ -82,7 +84,7 @@ def find_genbank_ftp_paths(requested_species):
     """ Finds all the GenBank FTP links for requested species """
     raise NotImplementedError("still working on this ...")
 
-def download_genomes(ftp_paths, output_dir, num, num_genomes, ratio_genomes):
+def download_genomes(ftp_paths, output_dir, num, num_genomes, ratio_genomes, decompress):
     """ Takes a list of paths, and downloads them to output directory"""
     with open(output_dir + "ftp_paths_for_curr_dataset.txt", "w") as fd:
         # First, figure out if user specified a certain number or ratio ...
@@ -112,12 +114,10 @@ def download_genomes(ftp_paths, output_dir, num, num_genomes, ratio_genomes):
     remove_command = f"rm {filelist} "
     run_command(remove_command, False)
 
-    """
-    Commented this out for now, KMC can read compressed files ....
-    """
-    #print(f"\nDecompressing those downloaded files now ...")
-    #decompress_command = f"for i in $(find {current_dataset_dir} -name '*.fna.gz'); do gzip -d $i; done"
-    #output, error = run_command(decompress_command, True)
+    if decompress:
+        print(f"\nDecompressing those downloaded files now ...")
+        decompress_command = f"for i in $(find {current_dataset_dir} -name '*.fna.gz'); do gzip -d $i; done"
+        output, error = run_command(decompress_command, True)
 
     return num_genomes
 
@@ -187,7 +187,8 @@ def main(args):
             continue
 
         # Execute the download of those genomes ...
-        num_downloaded = download_genomes(paths, args.output_dir, dataset_num, args.num_genomes, args.ratio_genomes)
+        num_downloaded = download_genomes(paths, args.output_dir, dataset_num, args.num_genomes, 
+                                          args.ratio_genomes, args.decompress)
         downloaded_genomes = True
 
         dataset_summaries.append([dataset_num, requested_species, num_downloaded])
@@ -212,6 +213,7 @@ def parse_arguments():
     parser.add_argument("-f", dest="input_list", help="path to file with species listed on each line to download.", default="")
     parser.add_argument("-n", dest="num_genomes", help="number of genomes to download from each species (default: all available)", type=int, default=0)
     parser.add_argument("-p", dest="ratio_genomes", help="percentage of genomes to download from available (0.0 < x <= 1.0)", type=float, default=0.0)
+    parser.add_argument("-d", dest="decompress", help="decompress genomes when downloaded (default: false)", default=False, action="store_true")
     args = parser.parse_args()
     return args
 
