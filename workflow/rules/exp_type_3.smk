@@ -1,10 +1,12 @@
 ####################################################
 # Name: exp_type_3.smk
 # Description: Contains functions and rules for
-#              the type of experiment type 3: this
-#              type is where we generally look at the
-#              kmer set in genomes w.r.t simulated reads
-#              from a pivot genome.
+#              the type of experiment type 3: 
+#
+#              Simulates reads from an out-pivot genome
+#              and measures what percentage of each read's 
+#              k-mers are found in databases of different species 
+#              across values of k.
 #
 # Date: 2/10/22
 ####################################################

@@ -14,11 +14,11 @@ library(data.table)
 ########################################################################
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 ########################################################################
-within_groups_data_path <- "/Users/omarahmed/Downloads/test/within_datasets_analysis.csv"
-across_groups_data_path <- "/Users/omarahmed/Downloads/test/across_datasets_analysis.csv"
+within_groups_data_path <- "/Users/mwche/Downloads/exp1_files/within_datasets_analysis.csv"
+across_groups_data_path <- "/Users/mwche/Downloads/exp1_files/across_datasets_analysis.csv"
 
 dataset_names <- c("E. coli", "Salmonella")
-working_dir <- "/Users/omarahmed/Downloads/test/"
+working_dir <- "/Users/mwche/Downloads/exp1_files/"
 
 ########################################################################
 # Methods for generating the two types of plots: within groups, and 
@@ -318,3 +318,4 @@ across_df_2nd_der = do.call(rbind, frame_list)
 curr_plot <- make_uniqueness_plot_across_groups_second_derivative(across_df_2nd_der)
 output_name <- paste(working_dir, "across_dataset_unique_stat_second_derivative.png", sep="")
 ggsave(output_name, plot=curr_plot, dpi=800, device="jpeg", width=9, height=6)
+
