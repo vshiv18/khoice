@@ -10,27 +10,34 @@ def main(args):
     entry_sum = 0
     entry_type = ""
 
-    if(args.kmers): 
+    if args.kmers: 
         entry_type="kmers"
-        # Write kmers until over requested num
-        # Build dictionary of headers and reads
+
+        # Build a dictionary of reads to sample from
         input_dict = {}
         for i in range(0,len(input_lines),2):
-            if(">" in input_lines[i]):
+            if ">" in input_lines[i]:
                 input_dict[input_lines[i]] = input_lines[i+1]
+
         # Chose and remove random read until reach kmer ceiling
         batch_size = 10000
         while entry_sum < args.num_included and len(input_dict) > 0:
+            # Adjust batch size if it is larger then remaining number of reads
             if len(input_dict) < batch_size:
                 batch_size = len(input_dict)
-            rand_entries = random.sample (list(input_dict.keys()), batch_size)
+            
+            # Sample a batch of reads from dictionary
+            rand_entries = random.sample(list(input_dict.keys()), batch_size)
             curr_batch_id = 0
+
+            # Extract reads one by one, write to output file, and keep track of how many kmers we have
             while entry_sum < args.num_included and len(input_dict) > 0 and curr_batch_id < batch_size:
                 rand_seq = input_dict.pop(rand_entries[curr_batch_id],None)
                 output.write(rand_entries[curr_batch_id]+"\n"+rand_seq+"\n")
                 entry_sum += len(rand_seq) - args.k + 1
                 curr_batch_id += 1
-    elif(args.half_mems):
+
+    elif args.half_mems:
         entry_type="half mems"
         input_dict = {}
         for i in range(0,len(input_lines),4):
@@ -73,9 +80,10 @@ def main(args):
                 entry_sum += len(rand_seqs[0])
                 curr_batch_id += 1
 
-    print("Returned {entry_sum} {type} with requested {requested}".format(entry_sum = entry_sum, type = entry_type, requested = args.num_included))
+    print("[log] Returned {entry_sum} {type} with requested {requested}".format(entry_sum = entry_sum, type = entry_type, requested = args.num_included))
+    
     # If entries requested greater than input
-    if(len(input_dict) == 0 or entry_sum == len(input_dict)):
+    if len(input_dict) == 0 or entry_sum == len(input_dict):
         print("Error: Number of entries requested >= input entries ({entry_sum})".format(entry_sum=entry_sum))
         exit(1)
 
@@ -111,7 +119,6 @@ def check_arguments(args):
         print("Error: exactly one of the following options must be chosen: --kmers, --half_mems, --mems")
         exit(1)
     
-
 if __name__ == "__main__":
     args = parse_arguments()
     check_arguments(args)

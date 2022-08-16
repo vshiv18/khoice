@@ -7,15 +7,52 @@
 # Date: June 14th, 2022
 
 import argparse
-from calendar import c
 import os
-import csv
-from tkinter.tix import COLUMN
+
+def build_dictionary(pivot_path):
+    """ Builds dictionary of pivot kmers with kmer_dict[key][0] as count """
+    kmer_dict = {}
+    with open(pivot_path, 'r') as fp:
+        lines = fp.readlines()
+        for line in lines:
+            kmer = line.split()[0]
+            count = line.split()[1]
+            kmer_dict[kmer] = [int(count)]
+    return kmer_dict
+
+def update_dictionary(pivot_dict, intersect_path, intersect_num, num_datasets):
+    """ Updates dictionary with intersect kmers """
+    with open(intersect_path, 'r') as fp:
+        lines = fp.readlines()
+        for line in lines:
+            kmer = line.split()[0]
+            if kmer in pivot_dict:
+                pivot_dict[kmer].append(intersect_num % num_datasets)
+    return pivot_dict
+
+def calculate_accuracy_values(confusion_matrix, num_datasets):
+    """ Calculates accuracy values given confusion matrix [TP TN FP FN] """
+    accuracies = []
+    for pivot in range(num_datasets):
+        tp = confusion_matrix[pivot][pivot]
+        fp = fn = tn = 0
+        for row in range(num_datasets):
+            for column in range(num_datasets + 1):
+                curr = confusion_matrix[row][column]
+                if column == pivot and row != pivot:
+                    fp += curr
+                elif row == pivot and column != pivot:
+                    fn += curr
+                elif row != pivot:
+                    tn += curr
+        accuracies.append([args.k,pivot,tp,tn,fp,fn])
+    return accuracies
 
 def main(args):
     """ main method for the script """
 
-    # Read in all the paths into these two lists
+    # Read in all the file paths for text dumps that will
+    # be needed of either the pivot or intersection databases
     pivot_files = []
     intersect_files = [] 
     with open(args.pivot_filelist, "r") as input_fd:
@@ -23,35 +60,36 @@ def main(args):
     with open(args.intersect_list, "r") as input_fd:
         intersect_files = [x.strip() for x in input_fd.readlines()]
 
-    # Verify each of the files in the file_lists is valid
+    # Verify each of the text dump file in the file_lists is valid
     for file_path in (pivot_files + intersect_files):
         if not os.path.isfile(file_path):
             print(f"Error: At least one of the file paths in the file lists is not valid ({file_path})")
             exit(1)
-
     print("[log] all file paths are valid, now will start to merge the lists.")
 
-    # Define the confusion matrix
-    # Last column counts kmers only in pivot
+    # Define the confusion matrix (last column represents kmers only in pivot)
     num_datasets = args.num_datasets
     confusion_matrix = [[0 for i in range(num_datasets + 1)] for j in range(num_datasets)]
 
-    # Fill in the confusion matrix from the upper-left to bottom right
+    # Fill in the confusion matrix from the upper-left to bottom right ...
     curr_pivot_num = 0
     curr_intersect_num = 0
+
+    # Loop starts at first row meaning first pivot
     for curr_pivot_file in pivot_files:
         print("[log] processing pivot {pivot} with k = {k}".format(pivot = curr_pivot_num + 1, k = args.k))
-        # Build dictionary of kmers with counts
+
+        # Build dictionary of kmers -> each kmer will point to list with 
+        # count and list of databases it occurs in
         curr_pivot_dict = build_dictionary(curr_pivot_file)
         for i in range(num_datasets):
-            # Update dictionary with intersect num
-            curr_pivot_dict = update_dictionary(curr_pivot_dict,intersect_files[curr_intersect_num], curr_intersect_num, num_datasets)
-            curr_intersect_num += 1 # might to be last line of inner for-loop
-            
+            curr_pivot_dict = update_dictionary(curr_pivot_dict, intersect_files[curr_intersect_num], curr_intersect_num, num_datasets)
+            curr_intersect_num += 1 
+
+        # Determine how many kmers only occur in the pivot (none of the databases)   
         unique_pivot_count = 0
         for kmer in curr_pivot_dict:
-            # Sum counts of kmers only in pivot
-            if(len(curr_pivot_dict[kmer]) == 1):
+            if len(curr_pivot_dict[kmer]) == 1:
                 unique_pivot_count += curr_pivot_dict[kmer][0]
         
         # Fill in the current row of the confusion matrix
@@ -60,6 +98,7 @@ def main(args):
             matches = curr_pivot_dict[kmer][1:]
             for match in matches:
                 confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
+
         # Last column is pivot only
         confusion_matrix[curr_pivot_num][num_datasets] = unique_pivot_count
         curr_pivot_num += 1 
@@ -67,19 +106,16 @@ def main(args):
     # Print out confusion matrix to a csv file
     output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.txt"
     with open(output_matrix,"w+") as csvfile:
-        writer = csv.writer(csvfile)
         for row in confusion_matrix:
-            writer.writerow(row)
+            csvfile.write(",".join([str(x) for x in row]) + "\n")
     
-    # Calculate accuracy values and print to csv file (k, dataset #, TP, TN, FP, FN)
-    
+    # Calculate confusion matrix summary values and print to csv file 
+    # Ex: k, pivot #, TP, TN, FP, FN
     output_acc = args.output_path + "values/k_"+ args.k +"_accuracy_values.csv"
     with open(output_acc, "w+") as csvfile:
-        writer = csv.writer(csvfile)
-        for score in calculate_accuracy_values(confusion_matrix,num_datasets):
-            writer.writerow(score)
-
-
+        csvfile.write(",".join(["k", "pivot_num", "TP", "TN", "FP", "FN"]) + "\n")
+        for scores in calculate_accuracy_values(confusion_matrix,num_datasets):
+            csvfile.write(",".join([str(x) for x in scores]) + "\n")
 
 def parse_arguments():
     """ Defines the command-line argument parser, and return arguments """
@@ -102,48 +138,9 @@ def check_arguments(args):
         exit(1)
 
 def check_path(file):
-    if(not os.path.isfile(file)):
+    if not os.path.isfile(file):
         print("Error: One of the provided files is not valid: "+file)
         exit(1)
-
-def build_dictionary(pivot_path):
-    """ Builds dictionary of pivot kmers with dict[0] as count """
-    dict = {}
-    with open(pivot_path, 'r') as fp:
-        lines = fp.readlines()
-        for line in lines:
-            kmer = line.split()[0]
-            count = line.split()[1]
-            dict[kmer] = [int(count)]
-    return dict
-
-def update_dictionary(pivot_dict, intersect_path, intersect_num, num_datasets):
-    """ Updates dictionary with intersect kmers """
-    with open(intersect_path, 'r') as fp:
-        lines = fp.readlines()
-        for line in lines:
-            kmer = line.split()[0]
-            if(kmer in pivot_dict):
-                pivot_dict[kmer].append(intersect_num % num_datasets)
-    return pivot_dict
-
-def calculate_accuracy_values(confusion_matrix, num_datasets):
-    """ Calculates accuracy values given confusion matrix [TP TN FP FN] """
-    accuracies = []
-    for pivot in range(num_datasets):
-        tp = confusion_matrix[pivot][pivot]
-        fp = fn = tn = 0
-        for row in range(num_datasets):
-            for column in range(num_datasets + 1):
-                curr = confusion_matrix[row][column]
-                if(column == pivot and row != pivot):
-                    fp += curr
-                elif(row == pivot and column != pivot):
-                    fn += curr
-                elif(row != pivot):
-                    tn += curr
-        accuracies.append([args.k,pivot,tp,tn,fp,fn])
-    return accuracies
 
 if __name__ == "__main__":
     args = parse_arguments()

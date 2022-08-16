@@ -16,15 +16,15 @@ num_datasets = config["NUM_DATASETS"]
 base_dir = config["DATA_ROOT"]
 repo_dir = config["REPO_DIRECTORY"]
 exp_type = config["EXP_TYPE"]
-num_reads_per_dataset =  config["READS_PER_DATASET"]
+num_reads_per_dataset =  config["NUM_READS_PER_DATASET"]
 pbsim_model = config["PBSIM_MODEL"]
 thresh = config["THRESHOLD"]
 r_dir = config["RINDEX_BUILD_DIRECTORY"]
+trial_info_dir = config["TRIAL_INFO_DIR"]
+num_kmers = config["KMERS_PER_DATASET"]
 
-
-#k_values = [str(x) for x in range(7, 23, 1)] + [str(x) for x in range(23, 37, 2)]
-k_values = [str(x) for x in range(38,53,3)]
-
+k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
+#k_values = [str(x) for x in range(38,53,3)]
 t_values = [1] + [str(x) for x in range(5, 35, 5)]
 
 ###############################################################################
@@ -64,9 +64,9 @@ include: "rules/exp_type_8.smk"
 #        "output_type_8/mems/confusion_matrix.csv"
 
 # Rule all for exp 7
-rule all:
-    input:
-        "output_type_7/half_mems/illumina/confusion_matrix.csv",
-        "output_type_7/mems/illumina/confusion_matrix.csv",
-        "output_type_7/half_mems/ont/confusion_matrix.csv",
-        "output_type_7/mems/ont/confusion_matrix.csv"
+#rule all:
+#    input:
+#        "output_type_7/half_mems/illumina/confusion_matrix.csv",
+#        "output_type_7/mems/illumina/confusion_matrix.csv",
+#        "output_type_7/half_mems/ont/confusion_matrix.csv",
+#        "output_type_7/mems/ont/confusion_matrix.csv"
