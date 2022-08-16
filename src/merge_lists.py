@@ -113,7 +113,6 @@ def main(args):
     # Ex: k, pivot #, TP, TN, FP, FN
     output_acc = args.output_path + "values/k_"+ args.k +"_accuracy_values.csv"
     with open(output_acc, "w+") as csvfile:
-        csvfile.write(",".join(["k", "pivot_num", "TP", "TN", "FP", "FN"]) + "\n")
         for scores in calculate_accuracy_values(confusion_matrix,num_datasets):
             csvfile.write(",".join([str(x) for x in scores]) + "\n")
 
