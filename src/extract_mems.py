@@ -11,45 +11,58 @@ import argparse
 import os
 
 def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
-    """ Given a pattern and lengths array (matching statistics), print out half mems to stdout """
+    """ Given a pattern and lengths array (matching statistics), print out half mems in FASTQ file """
     for i in range(len(curr_seq)):
         curr_half_mem_length = lengths_array[i]
+
+        # Filter out half-mems below threshold
         if curr_half_mem_length >= threshold:
             write_mem_length = curr_half_mem_length
-            # Added by Omar - for debugging
+
+            # Limit the length that is written to save space
             if curr_half_mem_length >= 1000:
                 write_mem_length = 1000
 
             random_quality = "#" * write_mem_length
             curr_half_mem = curr_seq[i:i+write_mem_length]
 
-            out_file.write(f">halfmem_{curr_seq_id}_length_{write_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
+            out_file.write(f">halfmem_{curr_seq_id}_length_{curr_half_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
             curr_seq_id += 1
     return curr_seq_id
 
 def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
-    # Print first mem
+    """ Given a pattern and lengths array (matching statistics), print out MEMs in FASTQ file """
+
+    # Print out MEM at position 0 (if it is above threshold)
     curr_mem_length = lengths_array[0]
-    if(curr_mem_length >= threshold):
+    if curr_mem_length >= threshold:
         write_mem_length = curr_mem_length
+        
+        # Added to reduce size of output FASTQ (mostly for out-genome case)
         if curr_mem_length >= 1000:
             write_mem_length = 1000
+
         random_quality = "#" * write_mem_length
         curr_mem = curr_seq[0:write_mem_length]
         out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
         curr_seq_id += 1
 
+    # Scan MS for peaks which correspond to MEMs
     for i in range(1, len(curr_seq)):
+
         prev_mem_length = lengths_array[i - 1]
         curr_mem_length = lengths_array[i]
+
         if curr_mem_length >= threshold:
-            # Take only maximal matches
-            if(curr_mem_length >= prev_mem_length):
+            # Take only MEMs
+            if curr_mem_length >= prev_mem_length:
                 write_mem_length = curr_mem_length
+
                 # Limit mem length for memory
                 if curr_mem_length >= 1000:
                     write_mem_length = 1000
-                    capped +=1
+                    capped += 1
+                    
                 random_quality = "#" * write_mem_length
                 curr_mem = curr_seq[i:i+write_mem_length]
                 out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
@@ -58,6 +71,8 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
 
 def main(args):
     """ Extracts either the half-mems/mems from a set of patterns matched to database """
+
+    # Open the reads, the MS lengths, and the output FASTQ
     pattern_fd = open(args.pattern_file, "r")
     length_fd = open(args.length_file, "r")
     out_fd = open(args.output_file, "w")
@@ -75,7 +90,6 @@ def main(args):
             seq_count[1] += 1
     assert seq_count[0] == seq_count[1], "assertion failed: mismatch in the number of sequences in each file."
     
-
     # Start to extract the requested output (half-mems or mems) and output to stdout
     seq_id = 0
     curr_id = 0
@@ -96,15 +110,18 @@ def main(args):
             curr_seq = ""
         elif not header_line:
             curr_seq += line.strip()
-    # Deal with last sequence not picked up by header
-    if(len(curr_seq)>0):
+
+    # Handle the last sequence not accounted for by for loop
+    if len(curr_seq) > 0:
         lengths_array = [int(x) for x in length_lines[(seq_id*2)+1].split()]
         assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
+
         if args.half_mems: # deal with half-MEMs
             curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
         else: # deal with MEMs
             curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
-     
+    
+    # Close input/output
     pattern_fd.close()
     length_fd.close()
     out_fd.close()

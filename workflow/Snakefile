@@ -22,9 +22,9 @@ thresh = config["THRESHOLD"]
 r_dir = config["RINDEX_BUILD_DIRECTORY"]
 trial_info_dir = config["TRIAL_INFO_DIR"]
 num_kmers = config["KMERS_PER_DATASET"]
+num_of_non_kmers = config["NON_KMERS_PER_DATASET"] # meaning either MEMs or half-MEMs
 
 k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
-#k_values = [str(x) for x in range(38,53,3)]
 t_values = [1] + [str(x) for x in range(5, 35, 5)]
 
 ###############################################################################
