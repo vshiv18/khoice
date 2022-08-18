@@ -54,7 +54,6 @@ if exp_type == 7:
 def get_dataset_non_pivot_genomes_exp7(wildcards):
     """ Returns list of non-pivot genomes for a given dataset """
     input_files = []
-    #if exp_type == 7:
     for data_file in os.listdir(f"exp7_non_pivot_data/dataset_{wildcards.num}/"):
         if data_file.endswith(".fna"):
             file_name = data_file.split(".fna")[0]
@@ -64,7 +63,6 @@ def get_dataset_non_pivot_genomes_exp7(wildcards):
 def get_all_non_pivot_genomes_exp7(wildcards):
     """ Returns list of all non-pivot genomes """
     input_files = []
-    #if exp_type == 7:  
     for i in range(1, num_datasets + 1):
         for data_file in os.listdir(f"exp7_non_pivot_data/dataset_{i}/"):
             if data_file.endswith(".fna"):
@@ -75,7 +73,6 @@ def get_all_non_pivot_genomes_exp7(wildcards):
 def get_combined_ref_dataset_exp7(wildcards):
     """ Returns list of forward combined refs for each dataset """
     input_files = []
-    #if exp_type == 7:
     for i in range(1, num_datasets + 1):
         input_files.append(f"exp7_combined_refs/dataset_{i}/combined_ref_forward.fna")
     return input_files
@@ -83,9 +80,7 @@ def get_combined_ref_dataset_exp7(wildcards):
 def get_python_input_exp7(wildcards):
     """ Returns a list of all pivot SAM files for a read type """
     input_files = []
-    #if(exp_type == 7):
     for i in range(1,num_datasets+1):
-        #input_files.append(f"ref_lists_type_7/dataset_{i}_references.txt")
         for j in range(1, num_datasets+1):
             input_files.append(f"exp7_sam_files/{wildcards.mem_type}/{wildcards.read_type}/pivot_{i}_align_dataset_{j}.sam")
     return input_files
@@ -104,7 +99,7 @@ rule generate_raw_positive_short_reads_exp7:
         "exp7_ms_data/illumina/pivot_{num}/pivot_{num}.fna"
     shell:
         """
-        art_illumina -ss HS25 -i exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna -na -l 150 -f 8.0 \
+        art_illumina -ss HS25 -i exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna -na -l 150 -f 20.0 \
         -o exp7_ms_data/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}
 
         seqtk seq -a exp7_ms_data/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}.fq > {output}
@@ -117,7 +112,7 @@ rule generate_raw_positive_long_reads_exp7:
         "exp7_ms_data/ont/pivot_{num}/pivot_{num}.fna"
     shell:
         """
-        pbsim --depth 8.0 --prefix exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num} \
+        pbsim --depth 20.0 --prefix exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num} \
         --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna
         
         cat 'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.fastq > exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq
