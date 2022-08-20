@@ -61,7 +61,6 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
                 # Limit mem length for memory
                 if curr_mem_length >= 1000:
                     write_mem_length = 1000
-                    capped += 1
                     
                 random_quality = "#" * write_mem_length
                 curr_mem = curr_seq[i:i+write_mem_length]
