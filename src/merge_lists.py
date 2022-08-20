@@ -99,8 +99,13 @@ def main(args):
             for match in matches:
                 confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
 
-        # Last column is pivot only
-        confusion_matrix[curr_pivot_num][num_datasets] = unique_pivot_count
+        # Last column is pivot only (made change below to avoid "unidentified" column by smearing)
+        # confusion_matrix[curr_pivot_num][num_datasets] = unique_pivot_count
+
+        confusion_matrix[curr_pivot_num][num_datasets] = 0
+        for i in range(num_datasets):
+            confusion_matrix[curr_pivot_num][i] += 1 / num_datasets * unique_pivot_count
+
         curr_pivot_num += 1 
 
     # Print out confusion matrix to a csv file
