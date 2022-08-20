@@ -20,7 +20,7 @@ library(dplyr)
 
 dataset_names <- c("B. Cereus", "B. Subtilis", "B. Weihenstephanensis")
 
-working_dir <- "/Users/mwche/Downloads/kmer_bacillus_trials/"
+kmer_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_2/dataset_b_kmer_trials/"
 # Kmer working dir should contain csv files with "long"/"short" in title (2 per trial)
 # MEM working dir should contain csv files with "long"/"short" AND "hm"/"m" in title (4 per trial)
 
@@ -121,7 +121,7 @@ make_f1_bar_chart_sd <- function(dataset_name, mem_df) {
 #######################################################################
 
 # Get all csv files from working directory
-values_files <- list.files(path=working_dir, pattern = "\\.csv$")
+kmer_values_files <- list.files(path=kmer_working_dir, pattern = "\\.csv$")
 col_names <- c("k","dataset","TP","TN","FP","FN")
 
 value_df_list = list()
@@ -131,7 +131,7 @@ for(i in seq_along(values_files)){
   print(values_files[i])
   
   # Read in csv and annotate with name and dataset
-  temp_df = read.csv(file = paste(working_dir,values_files[i], sep = ""),header = FALSE)
+  temp_df = read.csv(file = paste(kmer_working_dir,values_files[i], sep = ""),header = FALSE)
   colnames(temp_df) <- col_names
   temp_df[,"dataset"] <- as.factor(temp_df[,"dataset"])
   temp_df[,'source_csv'] <-values_files[[i]]
@@ -147,7 +147,7 @@ for(i in seq_along(values_files)){
   temp_df["recall"] = (temp_df["TP"])/(temp_df["TP"] + temp_df["FN"])
   temp_df["precision"] = (temp_df["TP"])/(temp_df["TP"] + temp_df["FP"])
   temp_df["f1"] = (2 * temp_df["recall"] * temp_df["precision"] / (temp_df["precision"] + temp_df["recall"]))
-  value_df_list[[mem_values_files[i]]] <- temp_df
+  value_df_list[[kmer_values_files[i]]] <- temp_df
 }
 
 # Merge list to mega-df
@@ -165,7 +165,7 @@ f1_df <- merge_df %>%
 #######################################################################
 
 # Get all csv files from working directory
-mem_working_dir <- "/Users/mwche/Downloads/mem_bacillus_trials_3/"
+mem_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_2/dataset_b_mem_trials/"
 mem_values_files <- list.files(path=mem_working_dir,pattern = "\\.csv$")
 mem_col_names <- c("dataset","TP","TN","FP","FN")
 
@@ -182,12 +182,12 @@ for(i in seq_along(mem_values_files)){
   temp_df[,'source_csv'] <-mem_values_files[[i]]
   
   # Fill columns with read type and mem type
-  if(grepl("short", mem_values_files[i],fixed = TRUE)){
+  if(grepl("illumina", mem_values_files[i],fixed = TRUE)){
     temp_df[,"read_type"] <-"short"
   }else{
     temp_df[,"read_type"] <-"long"
   }
-  if(grepl("hm", mem_values_files[i],fixed = TRUE)){
+  if(grepl("half_mems", mem_values_files[i],fixed = TRUE)){
     temp_df[,"mem_type"] <-"half_mem"
   }else{
     temp_df[,"mem_type"] <-"mem"
@@ -251,10 +251,11 @@ final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]],
 print(final_plot)
 
 # Saving plots: a vector and non-vector graphic
-output_name <- paste(mem_working_dir, "combined_plot_v8.jpeg", sep="")
+plot_output_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_2/plots/"
+output_name <- paste(plot_output_dir, "combined_plot.jpeg", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="jpeg", width=11, height=8)
 
-output_name <- paste(mem_working_dir, "combined_plot_v8.pdf", sep="")
+output_name <- paste(plot_output_dir, "combined_plot.pdf", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=11, height=8)
 
 
