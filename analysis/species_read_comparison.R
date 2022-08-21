@@ -20,7 +20,7 @@ library(dplyr)
 
 dataset_names <- c("B. Cereus", "B. Subtilis", "B. Weihenstephanensis")
 
-kmer_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_2/dataset_b_kmer_trials/"
+kmer_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_3/dataset_b_kmer_trials/"
 # Kmer working dir should contain csv files with "long"/"short" in title (2 per trial)
 # MEM working dir should contain csv files with "long"/"short" AND "hm"/"m" in title (4 per trial)
 
@@ -127,17 +127,17 @@ col_names <- c("k","dataset","TP","TN","FP","FN")
 value_df_list = list()
 
 # Wrangle each csv and add to list
-for(i in seq_along(values_files)){
-  print(values_files[i])
+for(i in seq_along(kmer_values_files)){
+  print(kmer_values_files[i])
   
   # Read in csv and annotate with name and dataset
-  temp_df = read.csv(file = paste(kmer_working_dir,values_files[i], sep = ""),header = FALSE)
+  temp_df = read.csv(file = paste(kmer_working_dir,kmer_values_files[i], sep = ""),header = FALSE)
   colnames(temp_df) <- col_names
   temp_df[,"dataset"] <- as.factor(temp_df[,"dataset"])
-  temp_df[,'source_csv'] <-values_files[[i]]
+  temp_df[,'source_csv'] <- kmer_values_files[[i]]
   
   # Fill columns with read type
-  if(grepl("short", values_files[i],fixed = TRUE)){
+  if(grepl("short", kmer_values_files[i],fixed = TRUE)){
     temp_df[,"read_type"] <-"short"
   }else{
     temp_df[,"read_type"] <-"long"
@@ -165,7 +165,7 @@ f1_df <- merge_df %>%
 #######################################################################
 
 # Get all csv files from working directory
-mem_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_2/dataset_b_mem_trials/"
+mem_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_3/dataset_b_mem_trials/"
 mem_values_files <- list.files(path=mem_working_dir,pattern = "\\.csv$")
 mem_col_names <- c("dataset","TP","TN","FP","FN")
 
@@ -251,7 +251,7 @@ final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]],
 print(final_plot)
 
 # Saving plots: a vector and non-vector graphic
-plot_output_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_2/plots/"
+plot_output_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/section_3_plots/trial_3/plots/"
 output_name <- paste(plot_output_dir, "combined_plot.jpeg", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="jpeg", width=11, height=8)
 
