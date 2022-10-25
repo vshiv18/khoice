@@ -1,8 +1,9 @@
-DATA_ROOT: "/home/oahmed6/scr4_blangme2/oahmed/khoice_exps/exp7_trial1"
+WORK_ROOT: "/home/oahmed6/scr16_blangme2/oahmed/khoice_exps/database_dir/processed_data/database_1"
+DATABASE_ROOT: "/home/oahmed6/scr16_blangme2/oahmed/khoice_exps/database_dir/raw_data/database_1"
 REPO_DIRECTORY: "/home/oahmed6/khoice"
 RINDEX_BUILD_DIRECTORY: "/home/oahmed6/r-index_dev/build"
-NUM_DATASETS: 3
-EXP_TYPE: 7
+NUM_DATASETS: 2
+EXP_TYPE: 0
 THRESHOLD: 15
 PBSIM_MODEL: "/home/oahmed6/pbsim2/data/R95.model"
 KMERS_PER_DATASET: 25000000
