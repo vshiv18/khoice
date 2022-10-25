@@ -246,10 +246,19 @@ def check_arguments(args):
     elif args.output_dir[-1] != "/":
         args.output_dir += "/"
     
-    # Adjust output directory to saves files to data folder (since workflow expects it)...
-    if not os.path.isdir(f"{args.output_dir}data/"):
-        os.mkdir(f"{args.output_dir}data/")
-    args.output_dir += "data/"
+    # Adjust output directory to saves files to data folder
+    # since workflow expects, the script tries to identify how
+    # many databases current exist.
+    curr_database_num = 1
+    while True:
+        if not os.path.isdir(f"{args.output_dir}database_{curr_database_num}/"):
+            break
+        else:
+            curr_database_num += 1
+  
+    if not os.path.isdir(f"{args.output_dir}database_{curr_database_num}/"):
+        os.mkdir(f"{args.output_dir}database_{curr_database_num}/")
+    args.output_dir += f"database_{curr_database_num}/"
 
 if __name__ == "__main__":
     args = parse_arguments()
