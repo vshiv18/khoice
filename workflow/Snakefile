@@ -13,7 +13,8 @@ import random
 configfile: "config/config.yaml"
 
 num_datasets = config["NUM_DATASETS"]
-base_dir = config["DATA_ROOT"]
+base_dir = config["WORK_ROOT"]
+database_root = config["DATABASE_ROOT"]
 repo_dir = config["REPO_DIRECTORY"]
 exp_type = config["EXP_TYPE"]
 num_reads_per_dataset =  config["NUM_READS_PER_DATASET"]
@@ -29,14 +30,15 @@ t_values = [1] + [str(x) for x in range(5, 35, 5)]
 
 ###############################################################################
 # IMPORTANT: Sets the working directory based on configuration parameter, and 
-#            it can be set on command-line using --config DATA_ROOT=""
+#            it can be set on command-line using --config WORK_ROOT=""
 ###############################################################################
-workdir: config["DATA_ROOT"]
+workdir: config["WORK_ROOT"]
 
 ###############################################################################
 # Imports rules for each type of experiment
 ###############################################################################
 
+include: "rules/prepare_data.smk"
 include: "rules/exp_type_1.smk"
 include: "rules/exp_type_2.smk"
 include: "rules/exp_type_3.smk"
