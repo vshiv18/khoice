@@ -71,6 +71,10 @@ def main(args):
     num_datasets = args.num_datasets
     confusion_matrix = [[0 for i in range(num_datasets + 1)] for j in range(num_datasets)]
 
+    # This version contains an additional column used to store kmers that are not 
+    # present in any database
+    confusion_matrix_with_ucol = [[0 for i in range(num_datasets + 1)] for j in range(num_datasets)]
+
     # Fill in the confusion matrix from the upper-left to bottom right ...
     curr_pivot_num = 0
     curr_intersect_num = 0
@@ -98,28 +102,42 @@ def main(args):
             matches = curr_pivot_dict[kmer][1:]
             for match in matches:
                 confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
+                confusion_matrix_with_ucol[curr_pivot_num][match] += 1 / len(matches) * count
 
-        # Last column is pivot only (made change below to avoid "unidentified" column by smearing)
-        # confusion_matrix[curr_pivot_num][num_datasets] = unique_pivot_count
-
+        # For "regular" confusion matrix, spread the unlabeled kmers across 
+        # all the columns.
         confusion_matrix[curr_pivot_num][num_datasets] = 0
         for i in range(num_datasets):
             confusion_matrix[curr_pivot_num][i] += 1 / num_datasets * unique_pivot_count
 
+        # For the confusion matrix with the unidentified column, add the kmers there
+        confusion_matrix_with_ucol[curr_pivot_num][num_datasets] = unique_pivot_count
+
         curr_pivot_num += 1 
 
-    # Print out confusion matrix to a csv file
+    # Print out "regular" confusion matrix to a csv file
     output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.txt"
     with open(output_matrix,"w+") as csvfile:
         for row in confusion_matrix:
             csvfile.write(",".join([str(x) for x in row]) + "\n")
+
+    # Print out confusion matrix with unidentified to a csv file
+    output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix_with_unidentified.txt"
+    with open(output_matrix,"w+") as csvfile:
+        for row in confusion_matrix_with_ucol:
+            csvfile.write(",".join([str(x) for x in row]) + "\n")
     
-    # Calculate confusion matrix summary values and print to csv file 
-    # Ex: k, pivot #, TP, TN, FP, FN
+    # Calculate confusion matrix summary values and print to csv file: 
+    # All the metrics ending with -U represent the scenario where we
+    # ignore the kmers in the last column.
+    # Ex: k, pivot #, TP, TN, FP, FN, TP-U, TN-U, FP-U, FN-U,
     output_acc = args.output_path + "values/k_"+ args.k +"_accuracy_values.csv"
     with open(output_acc, "w+") as csvfile:
-        for scores in calculate_accuracy_values(confusion_matrix,num_datasets):
-            csvfile.write(",".join([str(x) for x in scores]) + "\n")
+        scores = calculate_accuracy_values(confusion_matrix, num_datasets)
+        scores_with_last_col = calculate_accuracy_values(confusion_matrix_with_ucol, num_datasets)
+
+        for chunk_1, chunk_2 in zip(scores, scores_with_last_col):
+            csvfile.write(",".join([str(x) for x in chunk_1]) + "," + ",".join([str(x) for x in chunk_2[2:]]) + "\n")
 
 def parse_arguments():
     """ Defines the command-line argument parser, and return arguments """
