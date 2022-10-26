@@ -4,6 +4,7 @@ REPO_DIRECTORY: "/home/oahmed6/khoice"
 RINDEX_BUILD_DIRECTORY: "/home/oahmed6/r-index_dev/build"
 NUM_DATASETS: 2
 EXP_TYPE: 0
+NUM_TRIALS: 5
 THRESHOLD: 15
 PBSIM_MODEL: "/home/oahmed6/pbsim2/data/R95.model"
 KMERS_PER_DATASET: 25000000

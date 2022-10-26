@@ -15,6 +15,7 @@ configfile: "config/config.yaml"
 num_datasets = config["NUM_DATASETS"]
 base_dir = config["WORK_ROOT"]
 database_root = config["DATABASE_ROOT"]
+num_trials = config["NUM_TRIALS"]
 repo_dir = config["REPO_DIRECTORY"]
 exp_type = config["EXP_TYPE"]
 num_reads_per_dataset =  config["NUM_READS_PER_DATASET"]
