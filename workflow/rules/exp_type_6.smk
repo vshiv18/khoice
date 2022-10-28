@@ -15,12 +15,10 @@
 #            experiment is called. It genereates the
 #            needed files.
 # 
-#            Writes the input files for KMC complex 
-#            operations ...
-#
-# NOTE: the complex operations requires an input file,
-#       and this code generates those files, and saves
-#       them in the the complex_ops folder.
+#            It builds the needed directories for 
+#            KMC3, complex ops files for KMC3, and it
+#            builds the filelists needed for a python
+#            script.
 ####################################################
 
 if exp_type == 6:
@@ -28,73 +26,10 @@ if exp_type == 6:
     if not os.path.isdir("tmp"):
         os.mkdir("tmp")
     
-
-    """
-    # Parse out a pivot from the downloaded dataset
-    if not os.path.isdir("exp6_input/"):
-        for i in range(1, num_datasets+1):
-            dir_prefix = f"data/dataset_{i}/"
-            list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
-
-            if not os.path.isdir(f"exp6_input/rest_of_set/dataset_{i}"):
-                os.makedirs(f"exp6_input/rest_of_set/dataset_{i}")
-
-            # Copy over all the files at first
-            for data_file in list_of_files:
-                shutil.copy(data_file, f"exp6_input/rest_of_set/dataset_{i}")
-            
-            # Extract the pivot and move to new directory
-            dir_prefix = f"exp6_input/rest_of_set/dataset_{i}/"
-            list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
-
-            pivot = random.choice(list_of_files)
-
-            # Print pivot name to list in trial folder
-            with open(trial_info_dir + "/exp6_pivot_names.txt", 'a') as fd:
-                fd.write(pivot+"\n")
-
-            if not os.path.isdir(f"exp6_input/pivot/"):
-                os.makedirs(f"exp6_input/pivot/")
-            
-            # Remove pivot from other set of genomes
-            shutil.copy(pivot, f"exp6_input/pivot/pivot_{i}.fna.gz")
-            os.remove(pivot)
-    """
-
     # Initialize complex ops directory to start writing files
     if not os.path.isdir("exp6_complex_ops"):
         os.makedirs("exp6_complex_ops")
     
-    """
-    # Build the complex ops files
-    for k in k_values:
-        if not os.path.isdir(f"exp6_complex_ops/k_{k}"):
-            os.mkdir(f"exp6_complex_ops/k_{k}")
-        
-        for num in range(1, num_datasets+1):
-            kmc_input_files = []
-
-            for data_file in os.listdir(f"exp6_input/rest_of_set/dataset_{num}"):
-                if data_file.endswith(".fna.gz"):
-                    base_name = data_file.split(".fna.gz")[0]
-                    kmc_input_files.append(f"exp6_genome_sets/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
-            
-            if not os.path.isdir(f"exp6_complex_ops/k_{k}/dataset_{num}/"):
-                os.mkdir(f"exp6_complex_ops/k_{k}/dataset_{num}/")
-
-            with open(f"exp6_complex_ops/k_{k}/dataset_{num}/ops_{num}.txt", "w") as fd:
-                fd.write("INPUT:\n")
-                result_str = "("
-                for i, path in enumerate(kmc_input_files):
-                    fd.write(f"set{i+1} = {path}\n")
-                    result_str += "set{} + ".format(i+1)
-                result_str = result_str[:-2] + ")"
-                fd.write("OUTPUT:\n")
-                fd.write(f"exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
-                fd.write("OUTPUT_PARAMS:\n-cs5000\n")
-
-    """
-
     # Create filelists that will be used for merging text dumps
     read_types = ["illumina","ont"]
     
@@ -213,49 +148,49 @@ rule build_complex_ops_files_for_exp6:
 #   to a certain number of kmers to keep the confusion
 #   matrix roughly equal across each row
 
-rule generate_raw_positive_short_reads_exp6:
-    input:
-        "exp6_input/pivot/pivot_{num}.fna.gz"
-    output:
-        "exp6_input/pivot_reads/illumina/pivot_{num}.fa"
-    shell:
-        """
-        gzip -d {input} -k -f
-        art_illumina -ss HS25 -i exp6_input/pivot/pivot_{wildcards.num}.fna -na -l 150 -f 15.0 \
-        -o exp6_input/pivot_reads/illumina/pivot_{wildcards.num}
+# rule generate_raw_positive_short_reads_exp6:
+#     input:
+#         "exp6_input/pivot/pivot_{num}.fna.gz"
+#     output:
+#         "exp6_input/pivot_reads/illumina/pivot_{num}.fa"
+#     shell:
+#         """
+#         gzip -d {input} -k -f
+#         art_illumina -ss HS25 -i exp6_input/pivot/pivot_{wildcards.num}.fna -na -l 150 -f 15.0 \
+#         -o exp6_input/pivot_reads/illumina/pivot_{wildcards.num}
 
-        seqtk seq -a exp6_input/pivot_reads/illumina/pivot_{wildcards.num}.fq > {output}
-        """
+#         seqtk seq -a exp6_input/pivot_reads/illumina/pivot_{wildcards.num}.fq > {output}
+#         """
 
-rule generate_raw_positive_long_reads_exp6:
-    input:
-        "exp6_input/pivot/pivot_{num}.fna.gz"
-    output:
-        "exp6_input/pivot_reads/ont/pivot_{num}.fa"
-    shell:
-        """
-        gzip -d {input} -k -f
-        pbsim --depth 15.0 --prefix exp6_input/pivot_reads/ont/pivot_{wildcards.num} \
-        --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 exp6_input/pivot/pivot_{wildcards.num}.fna
+# rule generate_raw_positive_long_reads_exp6:
+#     input:
+#         "exp6_input/pivot/pivot_{num}.fna.gz"
+#     output:
+#         "exp6_input/pivot_reads/ont/pivot_{num}.fa"
+#     shell:
+#         """
+#         gzip -d {input} -k -f
+#         pbsim --depth 15.0 --prefix exp6_input/pivot_reads/ont/pivot_{wildcards.num} \
+#         --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 exp6_input/pivot/pivot_{wildcards.num}.fna
         
-        cat 'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.fastq > exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fastq
-        seqtk seq -a exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fastq > exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fa
-        rm 'exp6_input/pivot_reads/ont/pivot_{wildcards.num}_'*.fastq
-        ls  'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.ref | xargs rm
-        ls  'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.maf | xargs rm
-        """
+#         cat 'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.fastq > exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fastq
+#         seqtk seq -a exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fastq > exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fa
+#         rm 'exp6_input/pivot_reads/ont/pivot_{wildcards.num}_'*.fastq
+#         ls  'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.ref | xargs rm
+#         ls  'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.maf | xargs rm
+#         """
 
-rule subset_reads_exp_6:
-    input:
-        "exp6_input/pivot_reads/{read_type}/pivot_{num}.fa"
-    output:
-        "exp6_input/pivot_reads_subset/k_{k}/{read_type}/pivot_{num}.fa"
-    shell:
-        """
-        python3 {repo_dir}/src/subset_reads.py -i {input} -o {output} -n {num_kmers} -k {wildcards.k} --kmers
-        """
+# rule subset_reads_exp_6:
+#     input:
+#         "exp6_input/pivot_reads/{read_type}/pivot_{num}.fa"
+#     output:
+#         "exp6_input/pivot_reads_subset/k_{k}/{read_type}/pivot_{num}.fa"
+#     shell:
+#         """
+#         python3 {repo_dir}/src/subset_reads.py -i {input} -o {output} -n {num_kmers} -k {wildcards.k} --kmers
+#         """
         
-#   Section 3.2: Builds KMC databases for all the non-pivot
+#   Section 3.1: Builds KMC databases for all the non-pivot
 #   genomes. Also, builds KMC databases over the simulated
 #   reads from the pivot genomes from each dataset.
 
@@ -279,7 +214,7 @@ rule build_kmc_database_on_pivot_exp6:
         kmc -fm -m64 -k{wildcards.k} -ci1 {input} exp6_intermediate/step_1/pivot/k_{wildcards.k}/{wildcards.read_type}/pivot_{wildcards.num} tmp/
         """
 
-#   Section 3.3: Converts each kmer-database for a non-pivot
+#   Section 3.2: Converts each kmer-database for a non-pivot
 #   genome to make sure all the kmer's have multiplicity = 1. This
 #   step is not necessary, however, it makes it easier to interpret
 #   histogram files later on in workflow.
@@ -300,7 +235,7 @@ rule transform_genome_to_set_exp6:
         rm {input[0]} {input[1]}
         """
 
-#   Section 3.4: Takes all genomes within a dataset
+#   Section 3.3: Takes all genomes within a dataset
 #   OTHER THAN the pivot, and then unions them together.
 
 rule rest_of_set_union_exp6:
@@ -334,7 +269,7 @@ rule union_histogram_exp6:
         histogram exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.hist.txt \
         """
 
-#   Section 3.5: Convert the union database of each database into a kmer set, 
+#   Section 3.4: Convert the union database of each database into a kmer set, 
 #   meaning each kmer should have a multplicity. Again, this is step is not 
 #   necessary but it is helpful for interpreting intersection and unions.
 
@@ -354,7 +289,7 @@ rule transform_union_to_set_exp6:
         rm {input[0]} {input[1]}
      """
 
-#   Section 3.6: Performs an intersection between the union of a database
+#   Section 3.5: Performs an intersection between the union of a database
 #   and a database of the out-pivot's reads. It also includes a rule
 #   to list out the intersection histogram which can be used for sanity 
 #   checking since the intersection should not have any kmers that occur only
@@ -417,7 +352,7 @@ rule intersection_text_dump_exp6:
         dump -s exp6_text_dump/k_{wildcards.k}/{wildcards.read_type}/intersection/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.txt
         """
 
-#   Section 3.7 Runs Python script to generate a confusion matrix and 
+#   Section 3.6: Runs Python script to generate a confusion matrix and 
 #   values for a single read type and kmer length
 
 rule run_merge_list_exp6:
@@ -441,27 +376,27 @@ rule run_merge_list_exp6:
         rm exp6_text_dump/k_{wildcards.k}/{wildcards.read_type}/pivot/pivot_*.txt
         """
 
-#   Section 3.8 Concatenates confusion matrix summary values
+#   Section 3.7: Concatenates confusion matrix summary values
 #   for all values of k and read types
 
 rule concatenate_accuracies_exp6:
     input:
         expand("exp6_accuracies/{read_type}/values/k_{k}_accuracy_values.csv", k=k_values, read_type = {"illumina","ont"})
     output:
-        "exp6_accuracies/short_accuracy_values.csv",
-        "exp6_accuracies/long_accuracy_values.csv"
+        f"exp6_accuracies/trial_{curr_trial}_short_acc.csv",
+        f"exp6_accuracies/trial_{curr_trial}_long_acc.csv"
     shell:
         """
         printf "k,pivotnum,TP,TN,FP,FN,TP-U,TN-U,FP-U,FN-U\n" > {output[0]}
         printf "k,pivotnum,TP,TN,FP,FN,TP-U,TN-U,FP-U,FN-U\n" > {output[1]}
 
-        cat exp6_accuracies/illumina/values/k_*_accuracy_values.csv >> exp6_accuracies/short_accuracy_values.csv
-        cat exp6_accuracies/ont/values/k_*_accuracy_values.csv >> exp6_accuracies/long_accuracy_values.csv
+        cat exp6_accuracies/illumina/values/k_*_accuracy_values.csv >> {output[0]}
+        cat exp6_accuracies/ont/values/k_*_accuracy_values.csv >> {output[1]}
         """
 
 rule generate_exp6_output:
     input:
-        "exp6_accuracies/short_accuracy_values.csv",
-        "exp6_accuracies/long_accuracy_values.csv"
+        f"exp6_accuracies/trial_{curr_trial}_short_acc.csv",
+        f"exp6_accuracies/trial_{curr_trial}_long_acc.csv"
 
         
