@@ -17,6 +17,7 @@
 ####################################################
 
 if exp_type == 7:
+    """ --> Commented out when created prepare_data.smk
     if not os.path.isdir("exp7_non_pivot_data/"):
         for i in range(1, num_datasets+1):
             dir_prefix = f"data/dataset_{i}/"
@@ -45,6 +46,7 @@ if exp_type == 7:
             # Remove pivot from other set of genomes
             shutil.copy(pivot, f"exp7_pivot_data/pivot_ref/pivot_{i}.fna")
             os.remove(pivot)
+    """
 
 ####################################################
 # Section 2: Helper functions needed for these
@@ -85,42 +87,72 @@ def get_python_input_exp7(wildcards):
             input_files.append(f"exp7_sam_files/{wildcards.mem_type}/{wildcards.read_type}/pivot_{i}_align_dataset_{j}.sam")
     return input_files
 
+def get_input_data_for_exp7(wildcards):
+    """ Returns a list of files needed for the initial copying of the data """
+    input_files = []
+    input_files.append(f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{wildcards.num}/pivot_{wildcards.num}.fna.gz")
+    input_files.append(f"{database_root}/trial_{curr_trial}/exp0_pivot_reads/dataset_{wildcards.num}/illumina/pivot_{wildcards.num}_subset.fa")
+    input_files.append(f"{database_root}/trial_{curr_trial}/exp0_pivot_reads/dataset_{wildcards.num}/ont/pivot_{wildcards.num}_subset.fa")
+    input_files.append(f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/nonpivot_names.txt")
+    return input_files
+
 ####################################################
 # Section 3: Rules needed for this experiment type
 ####################################################
 
+#   Section 3.0: Copy over the data from the database folder
+#   into the expected structure for the workflow. 
+
+rule copy_over_raw_genomes_for_exp7:
+    input:
+        get_input_data_for_exp7
+    output:
+        "exp7_pivot_data/pivot_ref/pivot_{num}.fna",
+        "exp7_ms_data/illumina/pivot_{num}/pivot_{num}.fna",
+        "exp7_ms_data/ont/pivot_{num}/pivot_{num}.fna",
+        "exp7_non_pivot_data/dataset_{num}/nonpivot_names.txt"
+    shell:
+        """
+        gzip -d -c {input[0]} > {output[0]}
+        cp {input[1]} {output[1]}
+        cp {input[2]} {output[2]}
+        cp {input[3]} {output[3]}
+        cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz exp7_non_pivot_data/dataset_{wildcards.num}/
+        gzip -d exp7_non_pivot_data/dataset_{wildcards.num}/*.fna.gz
+        """
+
 #   Section 3.1: Generating long and short reads from each 
 #   out-pivot genome for each dataset
 
-rule generate_raw_positive_short_reads_exp7:
-    input:
-        "exp7_pivot_data/pivot_ref/pivot_{num}.fna"
-    output:
-        "exp7_ms_data/illumina/pivot_{num}/pivot_{num}.fna"
-    shell:
-        """
-        art_illumina -ss HS25 -i exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna -na -l 150 -f 20.0 \
-        -o exp7_ms_data/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}
+# rule generate_raw_positive_short_reads_exp7:
+#     input:
+#         "exp7_pivot_data/pivot_ref/pivot_{num}.fna"
+#     output:
+#         "exp7_ms_data/illumina/pivot_{num}/pivot_{num}.fna"
+#     shell:
+#         """
+#         art_illumina -ss HS25 -i exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna -na -l 150 -f 20.0 \
+#         -o exp7_ms_data/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}
 
-        seqtk seq -a exp7_ms_data/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}.fq > {output}
-        """
+#         seqtk seq -a exp7_ms_data/illumina/pivot_{wildcards.num}/pivot_{wildcards.num}.fq > {output}
+#         """
 
-rule generate_raw_positive_long_reads_exp7:
-    input:
-        "exp7_pivot_data/pivot_ref/pivot_{num}.fna"
-    output:
-        "exp7_ms_data/ont/pivot_{num}/pivot_{num}.fna"
-    shell:
-        """
-        pbsim --depth 20.0 --prefix exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num} \
-        --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna
+# rule generate_raw_positive_long_reads_exp7:
+#     input:
+#         "exp7_pivot_data/pivot_ref/pivot_{num}.fna"
+#     output:
+#         "exp7_ms_data/ont/pivot_{num}/pivot_{num}.fna"
+#     shell:
+#         """
+#         pbsim --depth 20.0 --prefix exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num} \
+#         --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 exp7_pivot_data/pivot_ref/pivot_{wildcards.num}.fna
         
-        cat 'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.fastq > exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq
-        seqtk seq -a exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq > {output}
-        rm 'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}_'*.fastq
-        ls  'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.ref | xargs rm
-        ls  'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.maf | xargs rm
-        """
+#         cat 'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.fastq > exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq
+#         seqtk seq -a exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}.fastq > {output}
+#         rm 'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}_'*.fastq
+#         ls  'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.ref | xargs rm
+#         ls  'exp7_ms_data/ont/pivot_{wildcards.num}/pivot_{wildcards.num}'*.maf | xargs rm
+#         """
 
 #   Section 3.2: Contains rules for building a concatenated reference of all
 #   the genomes in each database. Then, building reverse complements, and 
@@ -129,11 +161,19 @@ rule generate_raw_positive_long_reads_exp7:
 
 rule build_forward_ref_dataset_exp7:
     input:
-        get_dataset_non_pivot_genomes_exp7
+        "exp7_non_pivot_data/dataset_{num}/nonpivot_names.txt"
     output:
         "exp7_combined_refs/dataset_{num}/combined_ref_forward.fna"
     shell:
-        "cat {input} > {output}"
+        """
+        for file in $(ls exp7_non_pivot_data/dataset_{wildcards.num}/*.fna);
+        do
+            # Avoids the text file in the input
+            if [[ $file == *.fna ]]; then
+                cat $file >> {output}
+            fi
+        done
+        """
 
 rule build_rev_comp_ref_dataset_exp7:
     input:
@@ -221,21 +261,21 @@ rule extract_mems_or_halfmems_based_on_ms_exp7:
         -o {output}
         """
 
-rule subset_mems_or_halfmems_exp7:
-    input:
-        "exp7_{mem_type}_data/{read_type}/pivot_{pivot}.fastq",
-        "exp7_combined_ref_fai/combined_ref_forward_only.fna.fai"
-    output:
-        "exp7_{mem_type}_data/{read_type}/pivot_{pivot}_subset.fastq"
-    shell:
-        """
-        python3 {repo_dir}/src/subset_reads.py \
-        -i {input[0]} \
-        -o {output} \
-        --{wildcards.mem_type} \
-        -n {num_of_non_kmers} \
-        -l {input[1]} # fasta index to figure out noise factor
-        """
+# rule subset_mems_or_halfmems_exp7:
+#     input:
+#         "exp7_{mem_type}_data/{read_type}/pivot_{pivot}.fastq",
+#         "exp7_combined_ref_fai/combined_ref_forward_only.fna.fai"
+#     output:
+#         "exp7_{mem_type}_data/{read_type}/pivot_{pivot}_subset.fastq"
+#     shell:
+#         """
+#         python3 {repo_dir}/src/subset_reads.py \
+#         -i {input[0]} \
+#         -o {output} \
+#         --{wildcards.mem_type} \
+#         -n {num_of_non_kmers} \
+#         -l {input[1]} # fasta index to figure out noise factor
+#         """
 
 #   Section 3.6: Build r-index for each dataset individually over
 #   the reference containing both the forward and reverse complement.
@@ -259,7 +299,7 @@ rule align_pivot_against_rindex_of_database_exp7:
     input:
         "exp7_combined_refs/dataset_{num}/combined_ref_all.fna",
         "exp7_combined_refs/dataset_{num}/combined_ref_all.fna.ri",
-        "exp7_{mem_type}_data/{read_type}/pivot_{pivot}_subset.fastq"
+        "exp7_{mem_type}_data/{read_type}/pivot_{pivot}.fastq"
     output:
         "exp7_sam_files/{mem_type}/{read_type}/pivot_{pivot}_align_dataset_{num}.sam"
     shell:
@@ -299,11 +339,23 @@ rule gather_all_output_files_exp7:
         "exp7_output_data/mems/illumina/accuracy_values.csv",
         "exp7_output_data/mems/ont/accuracy_values.csv"
     output:
-        expand("exp7_final_output/{mem_type}_{read_type}.csv", mem_type=["half_mems", "mems"], read_type=["illumina", "ont"])
+        f"exp7_final_output/trial_{curr_trial}_half_mems_illumina.csv",
+        f"exp7_final_output/trial_{curr_trial}_half_mems_ont.csv",
+        f"exp7_final_output/trial_{curr_trial}_mems_illumina.csv",
+        f"exp7_final_output/trial_{curr_trial}_mems_ont.csv"
     shell:
         """
-        cp {input[0]} exp7_final_output/half_mems_illumina.csv
-        cp {input[1]} exp7_final_output/half_mems_ont.csv
-        cp {input[2]} exp7_final_output/mems_illumina.csv
-        cp {input[3]} exp7_final_output/mems_ont.csv
+        cp {input[0]} {output[0]}
+        cp {input[1]} {output[1]}
+        cp {input[2]} {output[2]}
+        cp {input[3]} {output[3]}
         """
+
+rule generate_exp7_output:
+    input:
+        f"exp7_final_output/trial_{curr_trial}_half_mems_illumina.csv",
+        f"exp7_final_output/trial_{curr_trial}_half_mems_ont.csv",
+        f"exp7_final_output/trial_{curr_trial}_mems_illumina.csv",
+        f"exp7_final_output/trial_{curr_trial}_mems_ont.csv"
+
+
