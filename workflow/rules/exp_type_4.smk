@@ -31,7 +31,7 @@ if exp_type == 4:
     # Parse out a pivot from the downloaded dataset
     if not os.path.isdir("input_type4/"):
         for i in range(1, num_datasets+1):
-            dir_prefix = f"data/dataset_{i}/"
+            dir_prefix = f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{i}/"
             list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
 
             if not os.path.isdir(f"input_type4/rest_of_set/dataset_{i}"):
@@ -41,18 +41,15 @@ if exp_type == 4:
             for data_file in list_of_files:
                 shutil.copy(data_file, f"input_type4/rest_of_set/dataset_{i}")
             
-            # Extract the pivot and move to new directory
-            dir_prefix = f"input_type4/rest_of_set/dataset_{i}/"
-            list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
-
-            pivot = random.choice(list_of_files)
+            # Take the pivot and copy to needed folder
+            pivot = f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{i}/pivot_{i}.fna.gz"
             if not os.path.isdir(f"input_type4/pivot/"):
                 os.makedirs(f"input_type4/pivot/")
-            
-            # Remove pivot from other set of genomes
             shutil.copy(pivot, f"input_type4/pivot/pivot_{i}.fna.gz")
-            if(out_pivot):
-                os.remove(pivot)
+
+            # Added pivot to rest_of_set if doing in-pivot
+            if not out_pivot_exp4:
+                shutil.copy(pivot, f"input_type4/rest_of_set/dataset_{i}")
     
     # Initialize complex ops directory to start writing files
     if not os.path.isdir("complex_ops_type_4"):
@@ -133,8 +130,8 @@ def get_filelists_and_text_dumps_exp_4(wildcards):
 # Section 3: Rules needed for this experiment type
 ####################################################
 
-# Section 3.1: Builds KMC databases, one rule
-# for pivot and one for all other genomes.
+#   Section 3.1: Builds KMC databases, one rule
+#   for pivot and one for all other genomes.
 
 rule build_kmc_database_on_genome_exp_type_4:
     input:
@@ -154,8 +151,8 @@ rule build_kmc_database_on_pivot_exp_type_4:
     shell:
         "kmc -fm -m64 -k{wildcards.k} -ci1 {input} step_1_type_4/pivot/k_{wildcards.k}/dataset_{wildcards.num}/pivot_{wildcards.num} tmp/"
 
-# Section 3.2: Converts each kmer database into 
-# a set (multiplicity=1) for all databases._
+#   Section 3.2: Converts each kmer database into 
+#   a set (multiplicity=1) for all databases._
 
 rule transform_genome_to_set_exp_type_4:
     input:
@@ -173,8 +170,8 @@ rule transform_genome_to_set_exp_type_4:
         rm {input[0]} {input[1]}
         """
 
-# Section 3.3: Takes all genomes within a dataset
-# OTHER THAN the pivot, and then unions them together.
+#   Section 3.3: Takes all genomes within a dataset
+#   OTHER THAN the pivot, and then unions them together.
 
 rule rest_of_set_union_exp_type_4:
     input:
@@ -214,8 +211,8 @@ rule transform_union_to_set_exp_type_4:
         rm {input[0]} {input[1]}
      """
 
-# Section 3.4: Performs intersection
-# between pivot and unioned databases.
+#   Section 3.4: Performs intersection
+#   between pivot and unioned databases.
 
 rule pivot_intersect_exp_type_4:
     input:
@@ -244,8 +241,8 @@ rule intersection_histogram_exp_type_4:
         histogram intersection_results_type_4/k_{wildcards.k}/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.hist.txt\
         """
 
-# Section 3.5 Generates text dump of 
-# pivot and intersection kmc files.
+#   Section 3.5 Generates text dump of 
+#   pivot and intersection kmc files.
 
 rule pivot_text_dump_exp_type_4:
     input:
@@ -273,8 +270,8 @@ rule intersection_text_dump_exp_type_4:
         dump -s text_dump_type_4/k_{wildcards.k}/intersection/pivot_{wildcards.pivot_num}/pivot_{wildcards.pivot_num}_intersect_dataset_{wildcards.num}.txt
         """
 
-# Section 3.7 Runs python script to generate a 
-# confusion matrix and accuracy scores for one value of k.
+#   Section 3.7 Runs python script to generate a 
+#   confusion matrix and accuracy scores for one value of k.
 
 rule run_merge_list_exp_type_4:
     input:
@@ -296,13 +293,21 @@ rule run_merge_list_exp_type_4:
         rm text_dump_type_4/k_{wildcards.k}/pivot/pivot_*.txt
         """
 
-# Section 3.8 Concatonates accuracy score tables
-# for all values of k to final csv file.
+#   Section 3.8 Concatenates accuracy score tables
+#   for all values of k to final csv file.
 
-rule concatonate_accuracies_exp_type4:
+rule concatenate_accuracies_exp_type4:
     input:
         expand("accuracies_type_4/values/k_{k}_accuracy_values.csv", k = k_values)
     output:
         "accuracies_type_4/accuracy_values.csv"
     shell:
         "cat accuracies_type_4/values/*.csv > accuracies_type_4/accuracy_values.csv"
+
+
+#   Section 3.9: Overall rule for Experiment 4 to generate all the 
+#   output files.
+
+rule generate_exp4_output:
+    input:
+        "accuracies_type_4/accuracy_values.csv"
