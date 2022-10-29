@@ -16,6 +16,7 @@ num_datasets = config["NUM_DATASETS"]
 base_dir = config["WORK_ROOT"]
 database_root = config["DATABASE_ROOT"]
 num_trials = config["NUM_TRIALS"]
+curr_trial = config["CURR_TRIAL"]
 repo_dir = config["REPO_DIRECTORY"]
 exp_type = config["EXP_TYPE"]
 num_reads_per_dataset =  config["NUM_READS_PER_DATASET"]
@@ -26,7 +27,11 @@ trial_info_dir = config["TRIAL_INFO_DIR"]
 num_kmers = config["KMERS_PER_DATASET"]
 num_of_non_kmers = config["NON_KMERS_PER_DATASET"] # meaning either MEMs or half-MEMs
 
-k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
+out_pivot_exp4 = config["OUT_PIVOT"]
+
+#k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
+k_values = [str(x) for x in range(7, 31, 6)]
+
 t_values = [1] + [str(x) for x in range(5, 35, 5)]
 
 ###############################################################################
