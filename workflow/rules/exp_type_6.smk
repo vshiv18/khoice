@@ -25,10 +25,68 @@ if exp_type == 6:
     # Make tmp directory for kmc
     if not os.path.isdir("tmp"):
         os.mkdir("tmp")
+
+    # Parse out a pivot from the downloaded dataset
+    if not os.path.isdir("exp6_input/"):
+        for i in range(1, num_datasets+1):
+            dir_prefix = f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{i}/"
+            list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
+
+            if not os.path.isdir(f"exp6_input/rest_of_set/dataset_{i}"):
+                os.makedirs(f"exp6_input/rest_of_set/dataset_{i}")
+
+            # Copy over all the files at first
+            for data_file in list_of_files:
+                shutil.copy(data_file, f"exp6_input/rest_of_set/dataset_{i}")
+            
+            # Extract the pivot and move to new directory
+            pivot = f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{i}/pivot_{i}.fna.gz"
+            if not os.path.isdir(f"exp6_input/pivot/"):
+                os.makedirs(f"exp6_input/pivot/")
+            shutil.copy(pivot, f"exp6_input/pivot/pivot_{i}.fna.gz")
+
+            # Copy over reads to approriate places
+            if not os.path.isdir(f"exp6_input/pivot_reads_subset/illumina"):
+                os.makedirs(f"exp6_input/pivot_reads_subset/illumina")
+            shutil.copy(f"{database_root}/trial_{curr_trial}/exp0_pivot_reads/dataset_{i}/illumina/pivot_{i}_subset.fa",
+            f"exp6_input/pivot_reads_subset/illumina/pivot_{i}.fa")
+
+            if not os.path.isdir(f"exp6_input/pivot_reads_subset/ont"):
+                os.makedirs(f"exp6_input/pivot_reads_subset/ont")
+            shutil.copy(f"{database_root}/trial_{curr_trial}/exp0_pivot_reads/dataset_{i}/ont/pivot_{i}_subset.fa",
+            f"exp6_input/pivot_reads_subset/ont/pivot_{i}.fa")
+
     
     # Initialize complex ops directory to start writing files
     if not os.path.isdir("exp6_complex_ops"):
         os.makedirs("exp6_complex_ops")
+
+    # Build the complex ops files
+    for k in k_values:
+        if not os.path.isdir(f"exp6_complex_ops/k_{k}"):
+            os.mkdir(f"exp6_complex_ops/k_{k}")
+        
+        for num in range(1, num_datasets+1):
+            kmc_input_files = []
+
+            for data_file in os.listdir(f"exp6_input/rest_of_set/dataset_{num}"):
+                if data_file.endswith(".fna.gz"):
+                    base_name = data_file.split(".fna.gz")[0]
+                    kmc_input_files.append(f"exp6_genome_sets/rest_of_set/k_{k}/dataset_{num}/{base_name}.transformed")
+            
+            if not os.path.isdir(f"exp6_complex_ops/k_{k}/dataset_{num}/"):
+                os.mkdir(f"exp6_complex_ops/k_{k}/dataset_{num}/")
+
+            with open(f"exp6_complex_ops/k_{k}/dataset_{num}/ops_{num}.txt", "w") as fd:
+                fd.write("INPUT:\n")
+                result_str = "("
+                for i, path in enumerate(kmc_input_files):
+                    fd.write(f"set{i+1} = {path}\n")
+                    result_str += "set{} + ".format(i+1)
+                result_str = result_str[:-2] + ")"
+                fd.write("OUTPUT:\n")
+                fd.write(f"exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined = {result_str}\n")
+                fd.write("OUTPUT_PARAMS:\n-cs5000\n")
     
     # Create filelists that will be used for merging text dumps
     read_types = ["illumina","ont"]
@@ -103,45 +161,45 @@ def get_filelists_and_text_dumps_exp6(wildcards):
 #   into the expected structure for the workflow. Build the
 #   complex ops files used for KMC.
 
-rule copy_over_raw_genomes_for_exp6:
-    input:
-        get_input_data_for_exp6
-    output:
-        "exp6_input/pivot/pivot_{num}.fna.gz",
-        "exp6_input/pivot_reads_subset/illumina/pivot_{num}.fa",
-        "exp6_input/pivot_reads_subset/ont/pivot_{num}.fa",
-        "exp6_input/rest_of_set/dataset_{num}/nonpivot_names.txt"
-    shell:
-        """
-        cp {input[0]} {output[0]}
-        cp {input[1]} {output[1]}
-        cp {input[2]} {output[2]}
-        cp {input[3]} {output[3]}
-        cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz exp6_input/rest_of_set/dataset_{wildcards.num}/
-        """
+# rule copy_over_raw_genomes_for_exp6:
+#     input:
+#         get_input_data_for_exp6
+#     output:
+#         "exp6_input/pivot/pivot_{num}.fna.gz",
+#         "exp6_input/pivot_reads_subset/illumina/pivot_{num}.fa",
+#         "exp6_input/pivot_reads_subset/ont/pivot_{num}.fa",
+#         "exp6_input/rest_of_set/dataset_{num}/nonpivot_names.txt"
+#     shell:
+#         """
+#         cp {input[0]} {output[0]}
+#         cp {input[1]} {output[1]}
+#         cp {input[2]} {output[2]}
+#         cp {input[3]} {output[3]}
+#         cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz exp6_input/rest_of_set/dataset_{wildcards.num}/
+#         """
 
-rule build_complex_ops_files_for_exp6:
-    input:
-        get_all_raw_genome_files_in_dataset_exp6
-    output:
-        "exp6_complex_ops/k_{k}/dataset_{num}/ops_{num}.txt"
-    run:
-        kmc_input_files = []
-        for data_file in os.listdir(f"exp6_input/rest_of_set/dataset_{wildcards.num}"):
-            if data_file.endswith(".fna.gz"):
-                base_name = data_file.split(".fna.gz")[0]
-                kmc_input_files.append(f"exp6_genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{base_name}.transformed")
+# rule build_complex_ops_files_for_exp6:
+#     input:
+#         get_all_raw_genome_files_in_dataset_exp6
+#     output:
+#         "exp6_complex_ops/k_{k}/dataset_{num}/ops_{num}.txt"
+#     run:
+#         kmc_input_files = []
+#         for data_file in os.listdir(f"exp6_input/rest_of_set/dataset_{wildcards.num}"):
+#             if data_file.endswith(".fna.gz"):
+#                 base_name = data_file.split(".fna.gz")[0]
+#                 kmc_input_files.append(f"exp6_genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{base_name}.transformed")
 
-        with open(output[0], "w") as fd:
-            fd.write("INPUT:\n")
-            result_str = "("
-            for i, path in enumerate(kmc_input_files):
-                fd.write(f"set{i+1} = {path}\n")
-                result_str += "set{} + ".format(i+1)
-            result_str = result_str[:-2] + ")"
-            fd.write("OUTPUT:\n")
-            fd.write(f"exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined = {result_str}\n")
-            fd.write("OUTPUT_PARAMS:\n-cs5000\n")
+#         with open(output[0], "w") as fd:
+#             fd.write("INPUT:\n")
+#             result_str = "("
+#             for i, path in enumerate(kmc_input_files):
+#                 fd.write(f"set{i+1} = {path}\n")
+#                 result_str += "set{} + ".format(i+1)
+#             result_str = result_str[:-2] + ")"
+#             fd.write("OUTPUT:\n")
+#             fd.write(f"exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined = {result_str}\n")
+#             fd.write("OUTPUT_PARAMS:\n-cs5000\n")
 
 #   Section 3.1: Simulate short and long reads from 
 #   every pivot genome, and then sub-sample the read
@@ -240,8 +298,7 @@ rule transform_genome_to_set_exp6:
 
 rule rest_of_set_union_exp6:
     input:
-        get_all_genome_sets_in_dataset_exp6,
-        "exp6_complex_ops/k_{k}/dataset_{num}/ops_{num}.txt"
+        get_all_genome_sets_in_dataset_exp6
     output:
         "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
         "exp6_unions/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"

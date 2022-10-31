@@ -17,10 +17,9 @@
 ####################################################
 
 if exp_type == 7:
-    """ --> Commented out when created prepare_data.smk
     if not os.path.isdir("exp7_non_pivot_data/"):
         for i in range(1, num_datasets+1):
-            dir_prefix = f"data/dataset_{i}/"
+            dir_prefix = f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{i}/"
             list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
 
             if not os.path.isdir(f"exp7_non_pivot_data/dataset_{i}"):
@@ -30,23 +29,24 @@ if exp_type == 7:
             for data_file in list_of_files:
                 shutil.copy(data_file, f"exp7_non_pivot_data/dataset_{i}")
             
-            # Extract the pivot and move to new directory
-            dir_prefix = f"exp7_non_pivot_data/dataset_{i}/"
-            list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
-
-            pivot = random.choice(list_of_files)
-
-            # Print pivot name to list in trial folder
-            with open(trial_info_dir + "/exp7_pivot_names.txt", 'a') as fd:
-                fd.write(pivot+"\n")
-
+            # Copy the pivot to approriate place
+            pivot = f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{i}/pivot_{i}.fna.gz"
             if not os.path.isdir(f"exp7_pivot_data/pivot_ref/"):
                 os.makedirs(f"exp7_pivot_data/pivot_ref/")
-            
-            # Remove pivot from other set of genomes
-            shutil.copy(pivot, f"exp7_pivot_data/pivot_ref/pivot_{i}.fna")
-            os.remove(pivot)
-    """
+            shutil.copy(pivot, f"exp7_pivot_data/pivot_ref/pivot_{i}.fna.gz")
+
+            # Copy over reads to approriate places
+            if not os.path.isdir(f"exp7_ms_data/illumina/pivot_{i}/"):
+                os.makedirs(f"exp7_ms_data/illumina/pivot_{i}/")
+            shutil.copy(f"{database_root}/trial_{curr_trial}/exp0_pivot_reads/dataset_{i}/illumina/pivot_{i}_subset.fa",
+            f"exp7_ms_data/illumina/pivot_{i}/pivot_{i}.fna")
+
+            if not os.path.isdir(f"exp7_ms_data/ont/pivot_{i}/"):
+                os.makedirs(f"exp7_ms_data/ont/pivot_{i}/")
+            shutil.copy(f"{database_root}/trial_{curr_trial}/exp0_pivot_reads/dataset_{i}/ont/pivot_{i}_subset.fa",
+            f"exp7_ms_data/ont/pivot_{i}/pivot_{i}.fna")
+
+    
 
 ####################################################
 # Section 2: Helper functions needed for these
@@ -57,20 +57,20 @@ def get_dataset_non_pivot_genomes_exp7(wildcards):
     """ Returns list of non-pivot genomes for a given dataset """
     input_files = []
     for data_file in os.listdir(f"exp7_non_pivot_data/dataset_{wildcards.num}/"):
-        if data_file.endswith(".fna"):
-            file_name = data_file.split(".fna")[0]
+        if data_file.endswith(".fna.gz"):
+            file_name = data_file.split(".fna.gz")[0]
             input_files.append(f"exp7_non_pivot_data/dataset_{wildcards.num}/{file_name}.fna")
     return input_files
 
-def get_all_non_pivot_genomes_exp7(wildcards):
-    """ Returns list of all non-pivot genomes """
-    input_files = []
-    for i in range(1, num_datasets + 1):
-        for data_file in os.listdir(f"exp7_non_pivot_data/dataset_{i}/"):
-            if data_file.endswith(".fna"):
-                file_name = data_file.split(".fna")[0]
-                input_files.append(f"exp7_non_pivot_data/dataset_{i}/{file_name}.fna")
-    return input_files
+# def get_all_non_pivot_genomes_exp7(wildcards):
+#     """ Returns list of all non-pivot genomes """
+#     input_files = []
+#     for i in range(1, num_datasets + 1):
+#         for data_file in os.listdir(f"exp7_non_pivot_data/dataset_{i}/"):
+#             if data_file.endswith(".fna"):
+#                 file_name = data_file.split(".fna")[0]
+#                 input_files.append(f"exp7_non_pivot_data/dataset_{i}/{file_name}.fna")
+#     return input_files
 
 def get_combined_ref_dataset_exp7(wildcards):
     """ Returns list of forward combined refs for each dataset """
@@ -103,22 +103,42 @@ def get_input_data_for_exp7(wildcards):
 #   Section 3.0: Copy over the data from the database folder
 #   into the expected structure for the workflow. 
 
-rule copy_over_raw_genomes_for_exp7:
+# rule copy_over_raw_genomes_for_exp7:
+#     input:
+#         get_input_data_for_exp7
+#     output:
+#         "exp7_pivot_data/pivot_ref/pivot_{num}.fna",
+#         "exp7_ms_data/illumina/pivot_{num}/pivot_{num}.fna",
+#         "exp7_ms_data/ont/pivot_{num}/pivot_{num}.fna",
+#         "exp7_non_pivot_data/dataset_{num}/nonpivot_names.txt"
+#     shell:
+#         """
+#         gzip -d -c {input[0]} > {output[0]}
+#         cp {input[1]} {output[1]}
+#         cp {input[2]} {output[2]}
+#         cp {input[3]} {output[3]}
+#         cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz exp7_non_pivot_data/dataset_{wildcards.num}/
+#         gzip -d exp7_non_pivot_data/dataset_{wildcards.num}/*.fna.gz
+#         """
+
+rule decompress_non_pivot_genomes_exp7:
     input:
-        get_input_data_for_exp7
+        "exp7_non_pivot_data/dataset_{num}/{genome}.fna.gz"
     output:
-        "exp7_pivot_data/pivot_ref/pivot_{num}.fna",
-        "exp7_ms_data/illumina/pivot_{num}/pivot_{num}.fna",
-        "exp7_ms_data/ont/pivot_{num}/pivot_{num}.fna",
-        "exp7_non_pivot_data/dataset_{num}/nonpivot_names.txt"
+        "exp7_non_pivot_data/dataset_{num}/{genome}.fna"
     shell:
         """
-        gzip -d -c {input[0]} > {output[0]}
-        cp {input[1]} {output[1]}
-        cp {input[2]} {output[2]}
-        cp {input[3]} {output[3]}
-        cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz exp7_non_pivot_data/dataset_{wildcards.num}/
-        gzip -d exp7_non_pivot_data/dataset_{wildcards.num}/*.fna.gz
+        gzip -d {input} -k
+        """
+
+rule decompress_pivot_genome_exp7:
+    input:
+        "exp7_ms_data/{read_type}/pivot_{pivot}/pivot_{pivot}.fna.gz"
+    output:
+        "exp7_ms_data/{read_type}/pivot_{pivot}/pivot_{pivot}.fna"
+    shell:
+        """
+        gzip -d {input} -k
         """
 
 #   Section 3.1: Generating long and short reads from each 
@@ -161,19 +181,23 @@ rule copy_over_raw_genomes_for_exp7:
 
 rule build_forward_ref_dataset_exp7:
     input:
-        "exp7_non_pivot_data/dataset_{num}/nonpivot_names.txt"
+        #"exp7_non_pivot_data/dataset_{num}/nonpivot_names.txt"
+        get_dataset_non_pivot_genomes_exp7
     output:
         "exp7_combined_refs/dataset_{num}/combined_ref_forward.fna"
     shell:
         """
-        for file in $(ls exp7_non_pivot_data/dataset_{wildcards.num}/*.fna);
-        do
-            # Avoids the text file in the input
-            if [[ $file == *.fna ]]; then
-                cat $file >> {output}
-            fi
-        done
+        cat {input} > {output}
         """
+        # """
+        # for file in $(ls exp7_non_pivot_data/dataset_{wildcards.num}/*.fna);
+        # do
+        #     # Avoids the text file in the input
+        #     if [[ $file == *.fna ]]; then
+        #         cat $file >> {output}
+        #     fi
+        # done
+        # """
 
 rule build_rev_comp_ref_dataset_exp7:
     input:

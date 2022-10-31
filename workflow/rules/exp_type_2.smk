@@ -27,11 +27,11 @@ if exp_type == 2:
     # Make tmp directory for kmc
     if not os.path.isdir("tmp"):
         os.mkdir("tmp")
-    """
+    
     # Parse out a pivot from the downloaded dataset
     if not os.path.isdir("input_type_2/"):
         for i in range(1, num_datasets+1):
-            dir_prefix = f"data/dataset_{i}/"
+            dir_prefix = f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{i}/"
             list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
 
             if not os.path.isdir(f"input_type_2/rest_of_set/dataset_{i}"):
@@ -41,19 +41,12 @@ if exp_type == 2:
             for data_file in list_of_files:
                 shutil.copy(data_file, f"input_type_2/rest_of_set/dataset_{i}")
             
-            # Extract the pivot and move to new directory
-            dir_prefix = f"input_type_2/rest_of_set/dataset_{i}/"
-            list_of_files = [dir_prefix + x for x in os.listdir(dir_prefix)]
-
-            pivot = random.choice(list_of_files)
+            # Take the pivot and move to new directory
+            pivot = f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{i}/pivot_{i}.fna.gz"
             if not os.path.isdir(f"input_type_2/pivot/dataset_{i}"):
                 os.makedirs(f"input_type_2/pivot/dataset_{i}")
-            
-            # Remove pivot from other set of genomes
             shutil.copy(pivot, f"input_type_2/pivot/dataset_{i}/pivot_{i}.fna.gz")
-            os.remove(pivot)
-    """
-    """
+
     # Initialize complex ops directory to start writing files
     if not os.path.isdir("complex_ops_type_2/"):
         os.makedirs("complex_ops_type_2/within_groups")
@@ -113,19 +106,19 @@ if exp_type == 2:
                 fd.write("OUTPUT:\n")
                 fd.write(f"across_databases_type_2/k_{k}/pivot_{pivot_num}/all_datasets_pivot_{pivot_num}.transformed.combined.transformed.combined = {result_str}\n")
                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
-    """   
+
 
 ####################################################
 # Section 2: Helper functions needed for these
 #            experiment rules.
 ####################################################
 
-def get_input_data_for_exp2(wildcards):
-    """ Returns a list of files needed for the initial copying of the data """
-    input_files = []
-    input_files.append(f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{wildcards.num}/pivot_{wildcards.num}.fna.gz")
-    input_files.append(f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/nonpivot_names.txt")
-    return input_files
+# def get_input_data_for_exp2(wildcards):
+#     """ Returns a list of files needed for the initial copying of the data """
+#     input_files = []
+#     input_files.append(f"{database_root}/trial_{curr_trial}/exp0_pivot_genomes/dataset_{wildcards.num}/pivot_{wildcards.num}.fna.gz")
+#     input_files.append(f"{database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/nonpivot_names.txt")
+#     return input_files
 
 def get_num_of_dataset_members_exp2(num):
     """ Return the number of genomes in the rest_of_set folder for a specific dataset """
@@ -231,63 +224,63 @@ def summarize_histogram_type2(sub_counts, inter_counts, num_genomes_in_dataset, 
 #   into the expected structure for the workflow. Build the
 #   complex ops files used for KMC.
 
-rule copy_over_raw_genomes_for_exp2:
-    input:
-        get_input_data_for_exp2
-    output:
-        "input_type_2/pivot/dataset_{num}/pivot_{num}.fna.gz",
-        "input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt"
-    shell:
-        """
-        cp {input[0]} {output[0]}
-        cp {input[1]} {output[1]}
-        cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz input_type_2/rest_of_set/dataset_{wildcards.num}/
-        """
+# rule copy_over_raw_genomes_for_exp2:
+#     input:
+#         get_input_data_for_exp2
+#     output:
+#         "input_type_2/pivot/dataset_{num}/pivot_{num}.fna.gz",
+#         "input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt"
+#     shell:
+#         """
+#         cp {input[0]} {output[0]}
+#         cp {input[1]} {output[1]}
+#         cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz input_type_2/rest_of_set/dataset_{wildcards.num}/
+#         """
 
-rule build_complex_ops_within_files_for_exp2:
-    input:
-        "input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt"
-    output:
-        "complex_ops_type_2/within_groups/k_{k}/dataset_{num}/within_dataset_{num}.txt"
-    run:
-        kmc_input_files = []
-        for data_file in os.listdir(f"input_type_2/rest_of_set/dataset_{wildcards.num}"):
-            if data_file.endswith(".fna.gz"):
-                base_name = data_file.split(".fna.gz")[0]
-                kmc_input_files.append(f"genome_sets_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{base_name}.transformed")
+# rule build_complex_ops_within_files_for_exp2:
+#     input:
+#         "input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt"
+#     output:
+#         "complex_ops_type_2/within_groups/k_{k}/dataset_{num}/within_dataset_{num}.txt"
+#     run:
+#         kmc_input_files = []
+#         for data_file in os.listdir(f"input_type_2/rest_of_set/dataset_{wildcards.num}"):
+#             if data_file.endswith(".fna.gz"):
+#                 base_name = data_file.split(".fna.gz")[0]
+#                 kmc_input_files.append(f"genome_sets_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{base_name}.transformed")
 
-        with open(output[0], "w") as fd:
-            fd.write("INPUT:\n")
-            result_str = "("
-            for i, path in enumerate(kmc_input_files):
-                fd.write(f"set{i+1} = {path}\n")
-                result_str += "set{} + ".format(i+1)
-            result_str = result_str[:-2] + ")"
-            fd.write("OUTPUT:\n")
-            fd.write(f"within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined = {result_str}\n")
-            fd.write("OUTPUT_PARAMS:\n-cs5000\n")
+#         with open(output[0], "w") as fd:
+#             fd.write("INPUT:\n")
+#             result_str = "("
+#             for i, path in enumerate(kmc_input_files):
+#                 fd.write(f"set{i+1} = {path}\n")
+#                 result_str += "set{} + ".format(i+1)
+#             result_str = result_str[:-2] + ")"
+#             fd.write("OUTPUT:\n")
+#             fd.write(f"within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined = {result_str}\n")
+#             fd.write("OUTPUT_PARAMS:\n-cs5000\n")
 
-rule build_complex_ops_across_files_for_exp2:
-    input:
-        expand("input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt", num=range(1,num_datasets+1))
-    output:
-        "complex_ops_type_2/across_groups/k_{k}/pivot_{pivot_num}/across_datasets_pivot_{pivot_num}.txt"
-    run:
-            kmc_input_files = []
-            for i in range(1, num_datasets+1):
-                if i != wildcards.pivot_num:
-                    kmc_input_files.append(f"within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{i}/dataset_{i}.transformed.combined.transformed")
+# rule build_complex_ops_across_files_for_exp2:
+#     input:
+#         expand("input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt", num=range(1,num_datasets+1))
+#     output:
+#         "complex_ops_type_2/across_groups/k_{k}/pivot_{pivot_num}/across_datasets_pivot_{pivot_num}.txt"
+#     run:
+#             kmc_input_files = []
+#             for i in range(1, num_datasets+1):
+#                 if i != wildcards.pivot_num:
+#                     kmc_input_files.append(f"within_databases_type_2/rest_of_set/k_{wildcards.k}/dataset_{i}/dataset_{i}.transformed.combined.transformed")
 
-            with open(output[0], "w") as fd:
-                fd.write("INPUT:\n")
-                result_str = "("
-                for i, path in enumerate(kmc_input_files):
-                    fd.write(f"set{i+1} = {path}\n")
-                    result_str += "set{} + ".format(i+1)
-                result_str = result_str[:-2] + ")"
-                fd.write("OUTPUT:\n")
-                fd.write(f"across_databases_type_2/k_{wildcards.k}/pivot_{wildcards.pivot_num}/all_datasets_pivot_{wildcards.pivot_num}.transformed.combined.transformed.combined = {result_str}\n")
-                fd.write("OUTPUT_PARAMS:\n-cs5000\n")
+#             with open(output[0], "w") as fd:
+#                 fd.write("INPUT:\n")
+#                 result_str = "("
+#                 for i, path in enumerate(kmc_input_files):
+#                     fd.write(f"set{i+1} = {path}\n")
+#                     result_str += "set{} + ".format(i+1)
+#                 result_str = result_str[:-2] + ")"
+#                 fd.write("OUTPUT:\n")
+#                 fd.write(f"across_databases_type_2/k_{wildcards.k}/pivot_{wildcards.pivot_num}/all_datasets_pivot_{wildcards.pivot_num}.transformed.combined.transformed.combined = {result_str}\n")
+#                 fd.write("OUTPUT_PARAMS:\n-cs5000\n")
 
 
 #   Section 3.1: Builds KMC databases, one rule
@@ -295,8 +288,8 @@ rule build_complex_ops_across_files_for_exp2:
 
 rule build_kmc_database_on_genome_exp_type_2:
     input:
-        #"input_type_2/rest_of_set/dataset_{num}/{genome}.fna.gz"
-        "input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt"
+        "input_type_2/rest_of_set/dataset_{num}/{genome}.fna.gz"
+        #"input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt"
     output:
         "step_1_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_pre",
         "step_1_type_2/rest_of_set/k_{k}/dataset_{num}/{genome}.kmc_suf"
@@ -347,8 +340,7 @@ rule transform_pivot_to_set_exp_type2:
 
 rule within_group_union_exp_type2:
     input:
-        get_all_genomes_in_dataset,
-        "complex_ops_type_2/within_groups/k_{k}/dataset_{num}/within_dataset_{num}.txt"
+        get_all_genomes_in_dataset
     output:
         "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_pre",
         "within_databases_type_2/rest_of_set/k_{k}/dataset_{num}/dataset_{num}.transformed.combined.kmc_suf"
@@ -465,8 +457,7 @@ rule transform_rest_of_set_to_single_counts:
 
 rule across_group_union_for_pivot_exp_type2:
     input:
-        get_across_group_union_for_pivot,
-        "complex_ops_type_2/across_groups/k_{k}/pivot_{num}/across_datasets_pivot_{num}.txt"
+        get_across_group_union_for_pivot
     output:
         "across_databases_type_2/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_pre",
         "across_databases_type_2/k_{k}/pivot_{num}/all_datasets_pivot_{num}.transformed.combined.transformed.combined.kmc_suf"
@@ -566,9 +557,9 @@ rule across_group_analysis_exp_type2:
 #   Section 3.10: Overall rules to first prepare the data in the working
 #   directory, and run the actualy experiment.
 
-rule prepare_data_for_exp2:
-    input:
-        expand("input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt", num=range(1, num_datasets+1))
+# rule prepare_data_for_exp2:
+#     input:
+#         expand("input_type_2/rest_of_set/dataset_{num}/nonpivot_names.txt", num=range(1, num_datasets+1))
 
 rule generate_exp2_output:
     input:
