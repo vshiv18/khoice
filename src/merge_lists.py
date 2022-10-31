@@ -110,8 +110,8 @@ def main(args):
         for i in range(num_datasets):
             confusion_matrix[curr_pivot_num][i] += 1 / num_datasets * unique_pivot_count
 
-        # For the confusion matrix with the unidentified column, add the kmers there
-        confusion_matrix_with_ucol[curr_pivot_num][num_datasets] = unique_pivot_count
+        # For the confusion matrix with the unidentified column empty, set it to zero
+        confusion_matrix_with_ucol[curr_pivot_num][num_datasets] = 0
 
         curr_pivot_num += 1 
 
