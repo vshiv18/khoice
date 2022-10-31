@@ -12,25 +12,29 @@ import random
 # Import configuration, and needed parameters
 configfile: "config/config.yaml"
 
-num_datasets = config["NUM_DATASETS"]
 base_dir = config["WORK_ROOT"]
 database_root = config["DATABASE_ROOT"]
+
+exp_type = config["EXP_TYPE"]
+num_datasets = config["NUM_DATASETS"]
 num_trials = config["NUM_TRIALS"]
 curr_trial = config["CURR_TRIAL"]
+
 repo_dir = config["REPO_DIRECTORY"]
-exp_type = config["EXP_TYPE"]
-num_reads_per_dataset =  config["NUM_READS_PER_DATASET"]
-pbsim_model = config["PBSIM_MODEL"]
-thresh = config["THRESHOLD"]
 r_dir = config["RINDEX_BUILD_DIRECTORY"]
 trial_info_dir = config["TRIAL_INFO_DIR"]
+
+pbsim_model = config["PBSIM_MODEL"]
+thresh = config["THRESHOLD"]
+num_reads_per_dataset =  config["NUM_READS_PER_DATASET"]
 num_kmers = config["KMERS_PER_DATASET"]
 num_of_non_kmers = config["NON_KMERS_PER_DATASET"] # meaning either MEMs or half-MEMs
 
 out_pivot_exp4 = config["OUT_PIVOT"]
 
-#k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
-k_values = [str(x) for x in range(7, 31, 6)]
+# k-mer lengths used in experiments
+k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
+#k_values = [str(x) for x in range(7, 31, 6)] --> Used for testing
 
 t_values = [1] + [str(x) for x in range(5, 35, 5)]
 
