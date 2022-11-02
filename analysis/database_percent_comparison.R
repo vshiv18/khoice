@@ -128,7 +128,7 @@ merge_df <- Reduce(function(x, y) merge(x, y, all=TRUE), percent_df_list)
 
 # Set the percentage you want to plot first, the csv-files should be
 # named like percent_100.csv to signify the % of genomes used.
-percent_db = 60
+percent_db = 80
 
 plot_list = list()
 for(dataset in 0:(length(dataset_names)-1)){
@@ -146,14 +146,15 @@ final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_lis
 
 print(final_plot)
 
-output_name <- paste(working_dir, "bacillus_database_60percent.png", sep="")
+output_name <- paste(working_dir, "bacillus_database_80percent.png", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="png", width=10, height=8)
 
-output_name <- paste(working_dir, "bacillus_database_60percent.pdf", sep="")
+output_name <- paste(working_dir, "bacillus_database_80percent.pdf", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=10, height=8)
 
 ######################################################################
-# Step 3: ....
+# Step 3: Focus on a particular k, and species, and show specificity
+# across time
 ######################################################################
 
 subset_list = list()
@@ -167,7 +168,6 @@ for(i in seq_along(percent_files)){
 
 }
 subset <- Reduce(function(x, y) merge(x, y, all=TRUE), subset_list)
-
 
 p_range <- make_subset_across_plot(subset, "B. Anthracis")
 p_unique <-make_subset_unique_across_plot(subset, "B. Anthracis")
