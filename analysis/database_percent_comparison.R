@@ -59,14 +59,14 @@ make_subset_unique_across_plot <- function(group_df, name) {
   plot <- ggplot(group_df, aes(x=database_size, y=percent_1_occ)) + 
           geom_bar(stat="identity",fill="steelblue") +
           theme_classic() +
-          theme(plot.title=element_text(hjust = 0.5, size=14),
-                axis.title.x=element_text(size =14),
-                axis.title.y=element_text(size=14),
+          theme(plot.title=element_text(hjust = 0.5, size=24),
+                axis.title.x=element_text(size=24),
+                axis.title.y=element_text(size=24),
                 legend.position = "bottom", 
                 legend.text=element_text(size=14),
                 legend.box="horizontal",
                 legend.title=element_text(size=14),
-                axis.text=element_text(size=12, color="black")) +
+                axis.text=element_text(size=18, color="black")) +
           scale_x_continuous(breaks = seq(20, 100, 20)) +
           labs(x="Database Size (% RefSeq)",
                y="% Kmers Unique to Pivot",
@@ -90,14 +90,14 @@ make_across_groups_plot <- function(group_df, name) {
   plot <- ggplot(group_df_melt, aes(fill=range, x=factor(k), y=percent)) + 
           geom_bar(position="fill", stat="identity") +
           theme_classic() +
-          theme(plot.title=element_text(hjust = 0.5, size=14),
-                axis.title.x=element_text(size =14),
-                axis.title.y=element_text(size=14),
+          theme(plot.title=element_text(hjust = 0.5, size=20),
+                axis.title.x=element_text(size =20),
+                axis.title.y=element_text(size=20),
                 legend.position = "bottom", 
-                legend.text=element_text(size=14),
+                legend.text=element_text(size=20),
                 legend.box="horizontal",
-                legend.title=element_text(size=14),
-                axis.text=element_text(size=12, color="black")) +
+                legend.title=element_text(size=20),
+                axis.text=element_text(size=14, color="black")) +
           labs(x="Kmer Length (k)",
                y="Ratio of Unique Kmers",
                title=name) +
@@ -128,7 +128,7 @@ merge_df <- Reduce(function(x, y) merge(x, y, all=TRUE), percent_df_list)
 
 # Set the percentage you want to plot first, the csv-files should be
 # named like percent_100.csv to signify the % of genomes used.
-percent_db = 80
+percent_db = 100
 
 plot_list = list()
 for(dataset in 0:(length(dataset_names)-1)){
@@ -141,16 +141,17 @@ for(dataset in 0:(length(dataset_names)-1)){
 
 final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_list[[4]],
                         labels = c("a", "b", "c", "d"), ncol = 2, nrow = 2,
-                        common.legend = TRUE, legend = "bottom")
+                        common.legend = TRUE, legend = "bottom",
+                        font.label=list(size = 20))
 
 
 print(final_plot)
 
-output_name <- paste(working_dir, "bacillus_database_80percent.png", sep="")
-ggsave(output_name, plot=final_plot, dpi=800, device="png", width=10, height=8)
+output_name <- paste(working_dir, "bacillus_database_100percent.png", sep="")
+ggsave(output_name, plot=final_plot, dpi=800, device="png", width=11, height=8)
 
-output_name <- paste(working_dir, "bacillus_database_80percent.pdf", sep="")
-ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=10, height=8)
+output_name <- paste(working_dir, "bacillus_database_100percent.pdf", sep="")
+ggsave(output_name, plot=final_plot, dpi=800, device="pdf", width=11, height=8)
 
 ######################################################################
 # Step 3: Focus on a particular k, and species, and show specificity

@@ -46,14 +46,14 @@ make_f1_ribbon_sd <- function(kmer_df, dataset_name, mem_df){
           #geom_hline(aes(yintercept=avg, linetype="Half-MEM", color=read_type), data = hm, size=1.0) +
           #geom_hline(aes(yintercept=avg, linetype="MEM", color=read_type), data = m, size=1.0) +
           theme_bw() +
-          theme(plot.title=element_text(hjust = 0.5, size=14),
-          axis.title.x=element_text(size =14),
-          axis.title.y=element_text(size=14),
+          theme(plot.title=element_text(hjust = 0.5, size=20),
+          axis.title.x=element_text(size =20),
+          axis.title.y=element_text(size=20),
           legend.position = "none",
-          legend.text=element_text(size=14),
+          legend.text=element_text(size=20),
           legend.box="horizontal",
-          legend.title=element_text(size=12),
-          axis.text=element_text(size=12, color="black")) +
+          legend.title=element_text(size=20),
+          axis.text=element_text(size=14, color="black")) +
           scale_x_continuous(breaks = seq(5, 50, 5)) +
           labs(title = plot_title,
                x = "Kmer length (k)",
@@ -258,7 +258,8 @@ final_plot <- ggarrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_lis
                         labels = c("a", "b", "c", "d"), ncol = 2, nrow = 2, 
                         legend.grob=mylegend, 
                         legend="bottom",
-                        common.legend=TRUE)
+                        common.legend=TRUE,
+                        font.label=list(size = 20))
 print(final_plot)
 
 # Saving plots: a vector and non-vector graphic
