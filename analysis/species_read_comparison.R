@@ -18,8 +18,9 @@ library(dplyr)
 # IMPORTANT: Experiment-dependent variables below, need to be set ...
 #######################################################################
 
-dataset_names <- c("B. Cereus", "B. Anthracis", "B. Thuringiensis", "B. Weihenstephanensis")
-kmer_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/results/section_3_plots/trial_6/kmer_data/"
+#dataset_names <- c("B. Cereus", "B. Anthracis", "B. Thuringiensis", "B. Weihenstephanensis")
+dataset_names <- c("B. Cereus", "B. Thuringiensis", "E. coli", "Salmonella")
+kmer_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/results/section_3_plots/trial_7/kmer_data/"
 
 # Kmer working dir should contain csv files with "long"/"short" in title (2 per trial)
 # MEM working dir should contain csv files with "long"/"short" AND "hm"/"m" in title (4 per trial)
@@ -172,7 +173,7 @@ f1_df <- merge_df %>%
 #######################################################################
 
 # Get all csv files from working directory
-mem_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/results/section_3_plots/trial_6/mem_data/"
+mem_working_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/results/section_3_plots/trial_7/mem_data/"
 mem_values_files <- list.files(path=mem_working_dir,pattern = "\\.csv$")
 mem_col_names <- c("dataset","TP","TN","FP","FN")
 
@@ -230,6 +231,10 @@ for(dataset in 0:(length(dataset_names)-1)){
   # Build the dataframes for kmers/half-mems and mems
   kmer_dataset_df = f1_df[f1_df$dataset == as.character(dataset),]
   mem_dataset_df = mem_f1_df[mem_f1_df$dataset == as.character(dataset),]
+  
+  # Determine the kmer length with optimal F1 score for long reads
+  max_long_k <- kmer_dataset_df$k[kmer_dataset_df$f1_avg == max(kmer_dataset_df$f1_avg)][1]
+  print(max_long_k)
 
   # Build the ribbon and bar chart
   temp_plot1 <- make_f1_ribbon_sd(kmer_dataset_df, dataset_names[dataset+1], mem_dataset_df)
@@ -264,7 +269,7 @@ print(final_plot)
 
 # Saving plots: a vector and non-vector graphic
 
-plot_output_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/results/section_3_plots/trial_6/plots/"
+plot_output_dir <- "/Users/omarahmed/downloads/current_research/khoice_exps/results/section_3_plots/trial_7/plots/"
 output_name <- paste(plot_output_dir, "combined_plot.jpeg", sep="")
 ggsave(output_name, plot=final_plot, dpi=800, device="jpeg", width=11, height=8)
 
