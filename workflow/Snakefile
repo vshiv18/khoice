@@ -57,28 +57,3 @@ include: "rules/exp_type_5.smk"
 include: "rules/exp_type_6.smk"
 include: "rules/exp_type_7.smk"
 include: "rules/exp_type_8.smk"
-
-# Rule all for exp 2 and 3
-#rule all:
-#    input:
-#        "within_dataset_analysis/within_dataset_analysis.csv",
-#        "across_dataset_analysis/across_dataset_analysis.csv"
-
-# Rule all for exp 4
-#rule all:
-#    input:
-#        "accuracies/accuracy_scores.csv"
-
-# Rule all for exp 5
-#rule all:
-#    input:
-#        "output_type_8/half_mems/confusion_matrix.csv",
-#        "output_type_8/mems/confusion_matrix.csv"
-
-# Rule all for exp 7
-#rule all:
-#    input:
-#        "output_type_7/half_mems/illumina/confusion_matrix.csv",
-#        "output_type_7/mems/illumina/confusion_matrix.csv",
-#        "output_type_7/half_mems/ont/confusion_matrix.csv",
-#        "output_type_7/mems/ont/confusion_matrix.csv"

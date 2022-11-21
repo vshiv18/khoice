@@ -252,7 +252,7 @@ rule build_spumoni_index_exp7:
         # Only use forward references for spumoni
         """
         cp {input} exp7_indexes/spumoni_index/combined_ref_forward_only.fna
-        spumoni build -r exp7_indexes/spumoni_index/combined_ref_forward_only.fna -M -n
+        spumoni build -r exp7_indexes/spumoni_index/combined_ref_forward_only.fna -M -n -o exp7_indexes/spumoni_index/spumoni_full_ref
         """
 
 rule run_spumoni_to_generate_ms_exp7:
@@ -263,7 +263,7 @@ rule run_spumoni_to_generate_ms_exp7:
         "exp7_ms_data/{read_type}/pivot_{pivot}/pivot_{pivot}.fna.lengths"
     shell:
         """
-        spumoni run -r {input[0]} -p {input[1]} -M -n 
+        spumoni run -r exp7_indexes/spumoni_index/spumoni_full_ref -p {input[1]} -M -n 
         """
 
 #   Section 3.5: Extract half-MEMs and MEMs using the pivot's MS lengths
