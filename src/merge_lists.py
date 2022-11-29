@@ -8,6 +8,8 @@
 
 import argparse
 import os
+import numpy as np
+import random
 
 def build_dictionary(pivot_path):
     """ Builds dictionary of pivot kmers with kmer_dict[key][0] as count """
@@ -48,6 +50,28 @@ def calculate_accuracy_values(confusion_matrix, num_datasets):
         accuracies.append([args.k,pivot,tp,tn,fp,fn])
     return accuracies
 
+def process_read_into_kmers(read, k):
+    """ Split read into kmers and return it """
+    kmer_list = []
+    for i in range(0, len(read)-k+1):
+        kmer_list.append(read[i:i+k])
+    return kmer_list
+
+def get_canonical_kmer(kmer):
+    """ Return the canonical form of a given kmer """
+    # Generate reverse complement ...
+    comp = ""
+    rev_comp_dict = {'A':'T', 'C':'G', 'G':'C', 'T':'A'}
+    for ch in kmer:
+        comp += rev_comp_dict[ch]
+    rev_comp = comp[::-1]
+
+    # Return the smaller of the two kmers ...
+    if kmer < rev_comp:
+        return kmer
+    else:
+        return rev_comp
+    
 def main(args):
     """ main method for the script """
 
@@ -66,6 +90,13 @@ def main(args):
             print(f"Error: At least one of the file paths in the file lists is not valid ({file_path})")
             exit(1)
     print("[log] all file paths are valid, now will start to merge the lists.")
+
+    # Determine how analysis will be done ...
+    if args.read_level is None:
+        print("[log] analysis will be done at feature-level")
+    else:
+        print("[log] analysis will be done at the read-level")
+    print()
 
     # Define the confusion matrix (last column represents kmers only in pivot)
     num_datasets = args.num_datasets
@@ -95,26 +126,63 @@ def main(args):
         for kmer in curr_pivot_dict:
             if len(curr_pivot_dict[kmer]) == 1:
                 unique_pivot_count += curr_pivot_dict[kmer][0]
-        
-        # Fill in the current row of the confusion matrix
-        for kmer in curr_pivot_dict:
-            count = curr_pivot_dict[kmer][0]
-            matches = curr_pivot_dict[kmer][1:]
-            for match in matches:
-                confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
-                confusion_matrix_with_ucol[curr_pivot_num][match] += 1 / len(matches) * count
 
-        # For "regular" confusion matrix, spread the unlabeled kmers across 
-        # all the columns.
-        confusion_matrix[curr_pivot_num][num_datasets] = 0
-        for i in range(num_datasets):
-            confusion_matrix[curr_pivot_num][i] += 1 / num_datasets * unique_pivot_count
 
-        # For the confusion matrix with the unidentified column empty, set it to zero
-        confusion_matrix_with_ucol[curr_pivot_num][num_datasets] = 0
+        # Fill in the current row of the confusion matrix (depends on whether we
+        # want to do analysis at read-level or feature-level)
 
+        if args.read_level is None: # feature-level
+            for kmer in curr_pivot_dict:
+                count = curr_pivot_dict[kmer][0]
+                matches = curr_pivot_dict[kmer][1:]
+                for match in matches:
+                    confusion_matrix[curr_pivot_num][match] += 1 / len(matches) * count
+                    confusion_matrix_with_ucol[curr_pivot_num][match] += 1 / len(matches) * count
+
+            # For "regular" confusion matrix, spread the unlabeled kmers across 
+            # all the columns.
+            confusion_matrix[curr_pivot_num][num_datasets] = 0
+            for i in range(num_datasets):
+                confusion_matrix[curr_pivot_num][i] += 1 / num_datasets * unique_pivot_count
+
+            # For the confusion matrix with the unidentified column empty, set it to zero
+            confusion_matrix_with_ucol[curr_pivot_num][num_datasets] = 0
+
+        else: # read-level
+            file_path = f"{args.read_level[0]}pivot_{(curr_pivot_num+1)}.fa"
+            with open(file_path, "r") as in_fd:
+                all_lines = in_fd.readlines()
+                count = 0
+                for line in all_lines:
+                    if ">" not in line:
+                        # Grab all kmers from current read
+                        kmer_list = process_read_into_kmers(line.strip(), int(args.k))
+                        votes = [0 for i in range(num_datasets)]
+                        votes_with_ucol = [0 for i in range(num_datasets)]
+
+                        # Process the reads kmers to determine the read's classification
+                        for kmer in kmer_list:
+                            canon_kmer = get_canonical_kmer(kmer)
+                            if canon_kmer in curr_pivot_dict:
+                                matches = curr_pivot_dict[canon_kmer][1:]
+                                for match in matches:
+                                    votes[match] += 1/len(matches)
+                                    votes_with_ucol[match] += 1/len(matches)
+                            else:
+                                print("Error: kmer was not found in the dictionary")
+                                exit(1)
+                        
+                        # Determine which class is the prediction and update confusion matrix...
+                        votes_np = np.array(votes)
+                        max_indexes = np.where(votes_np == max(votes))[0]
+                        class_decision = random.choice(max_indexes)
+
+                        confusion_matrix[curr_pivot_num][class_decision] += 1
+                        confusion_matrix_with_ucol[curr_pivot_num][class_decision] += 1
+            
+        # Increment the counter ...
         curr_pivot_num += 1 
-
+    
     # Print out "regular" confusion matrix to a csv file
     output_matrix = args.output_path + "confusion_matrix/k_"+ args.k +"_confusion_matrix.txt"
     with open(output_matrix,"w+") as csvfile:
@@ -148,15 +216,22 @@ def parse_arguments():
     parser.add_argument("-i", "--intersect_list", dest="intersect_list", required=True, help="path to text file with a list of kmer lists representing the intersections")
     parser.add_argument("-o", "--output_path", dest = "output_path", required=True, help = "path to output directory") # Match snakemake format
     parser.add_argument("-k", "--k_value", dest = "k", required = True, help = "k value for this experiment")
+    parser.add_argument("-r", "--read-level", dest="read_level", help="perform analysis at read-level (default: feature-level)", nargs=1)
     args = parser.parse_args()
     return args
 
 def check_arguments(args):
     """ Checks the arguments to make sure they are valid """
+
     check_path(args.pivot_filelist)
     check_path(args.intersect_list)
+
     if args.num_datasets <= 0:
         print("Error: The number of datasets needs to be positive integer.")
+        exit(1)
+    
+    if args.read_level is not None and not os.path.isdir(args.read_level[0]):
+        print("Error: the path provided for read-level analysis is not valid.")
         exit(1)
 
 def check_path(file):

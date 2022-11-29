@@ -427,6 +427,7 @@ rule run_merge_list_exp6:
         -o exp6_accuracies/{wildcards.read_type}/ \
         -n {num_datasets} \
         -k {wildcards.k} \
+        -r exp6_input/pivot_reads_subset/{wildcards.read_type}/
 
         # Remove text dumps for this k and read type
         rm exp6_text_dump/k_{wildcards.k}/{wildcards.read_type}/intersection/pivot_*/pivot_*_intersect_dataset_*.txt
