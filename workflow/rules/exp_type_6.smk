@@ -156,97 +156,6 @@ def get_filelists_and_text_dumps_exp6(wildcards):
 ####################################################
 # Section 3: Rules needed for this experiment type
 ####################################################
-
-#   Section 3.0: Copy over the data from the database folder
-#   into the expected structure for the workflow. Build the
-#   complex ops files used for KMC.
-
-# rule copy_over_raw_genomes_for_exp6:
-#     input:
-#         get_input_data_for_exp6
-#     output:
-#         "exp6_input/pivot/pivot_{num}.fna.gz",
-#         "exp6_input/pivot_reads_subset/illumina/pivot_{num}.fa",
-#         "exp6_input/pivot_reads_subset/ont/pivot_{num}.fa",
-#         "exp6_input/rest_of_set/dataset_{num}/nonpivot_names.txt"
-#     shell:
-#         """
-#         cp {input[0]} {output[0]}
-#         cp {input[1]} {output[1]}
-#         cp {input[2]} {output[2]}
-#         cp {input[3]} {output[3]}
-#         cp {database_root}/trial_{curr_trial}/exp0_nonpivot_genomes/dataset_{wildcards.num}/*.fna.gz exp6_input/rest_of_set/dataset_{wildcards.num}/
-#         """
-
-# rule build_complex_ops_files_for_exp6:
-#     input:
-#         get_all_raw_genome_files_in_dataset_exp6
-#     output:
-#         "exp6_complex_ops/k_{k}/dataset_{num}/ops_{num}.txt"
-#     run:
-#         kmc_input_files = []
-#         for data_file in os.listdir(f"exp6_input/rest_of_set/dataset_{wildcards.num}"):
-#             if data_file.endswith(".fna.gz"):
-#                 base_name = data_file.split(".fna.gz")[0]
-#                 kmc_input_files.append(f"exp6_genome_sets/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/{base_name}.transformed")
-
-#         with open(output[0], "w") as fd:
-#             fd.write("INPUT:\n")
-#             result_str = "("
-#             for i, path in enumerate(kmc_input_files):
-#                 fd.write(f"set{i+1} = {path}\n")
-#                 result_str += "set{} + ".format(i+1)
-#             result_str = result_str[:-2] + ")"
-#             fd.write("OUTPUT:\n")
-#             fd.write(f"exp6_unions/rest_of_set/k_{wildcards.k}/dataset_{wildcards.num}/dataset_{wildcards.num}.transformed.combined = {result_str}\n")
-#             fd.write("OUTPUT_PARAMS:\n-cs5000\n")
-
-#   Section 3.1: Simulate short and long reads from 
-#   every pivot genome, and then sub-sample the read
-#   to a certain number of kmers to keep the confusion
-#   matrix roughly equal across each row
-
-# rule generate_raw_positive_short_reads_exp6:
-#     input:
-#         "exp6_input/pivot/pivot_{num}.fna.gz"
-#     output:
-#         "exp6_input/pivot_reads/illumina/pivot_{num}.fa"
-#     shell:
-#         """
-#         gzip -d {input} -k -f
-#         art_illumina -ss HS25 -i exp6_input/pivot/pivot_{wildcards.num}.fna -na -l 150 -f 15.0 \
-#         -o exp6_input/pivot_reads/illumina/pivot_{wildcards.num}
-
-#         seqtk seq -a exp6_input/pivot_reads/illumina/pivot_{wildcards.num}.fq > {output}
-#         """
-
-# rule generate_raw_positive_long_reads_exp6:
-#     input:
-#         "exp6_input/pivot/pivot_{num}.fna.gz"
-#     output:
-#         "exp6_input/pivot_reads/ont/pivot_{num}.fa"
-#     shell:
-#         """
-#         gzip -d {input} -k -f
-#         pbsim --depth 15.0 --prefix exp6_input/pivot_reads/ont/pivot_{wildcards.num} \
-#         --hmm_model {pbsim_model} --accuracy-mean 0.95 --length-min 200 exp6_input/pivot/pivot_{wildcards.num}.fna
-        
-#         cat 'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.fastq > exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fastq
-#         seqtk seq -a exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fastq > exp6_input/pivot_reads/ont/pivot_{wildcards.num}.fa
-#         rm 'exp6_input/pivot_reads/ont/pivot_{wildcards.num}_'*.fastq
-#         ls  'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.ref | xargs rm
-#         ls  'exp6_input/pivot_reads/ont/pivot_{wildcards.num}'*.maf | xargs rm
-#         """
-
-# rule subset_reads_exp_6:
-#     input:
-#         "exp6_input/pivot_reads/{read_type}/pivot_{num}.fa"
-#     output:
-#         "exp6_input/pivot_reads_subset/k_{k}/{read_type}/pivot_{num}.fa"
-#     shell:
-#         """
-#         python3 {repo_dir}/src/subset_reads.py -i {input} -o {output} -n {num_kmers} -k {wildcards.k} --kmers
-#         """
         
 #   Section 3.1: Builds KMC databases for all the non-pivot
 #   genomes. Also, builds KMC databases over the simulated
@@ -427,7 +336,7 @@ rule run_merge_list_exp6:
         -o exp6_accuracies/{wildcards.read_type}/ \
         -n {num_datasets} \
         -k {wildcards.k} \
-        -r exp6_input/pivot_reads_subset/{wildcards.read_type}/
+        -r exp6_input/pivot_reads_subset/{wildcards.read_type}/ # Comment this out if you want to do feature-level
 
         # Remove text dumps for this k and read type
         rm exp6_text_dump/k_{wildcards.k}/{wildcards.read_type}/intersection/pivot_*/pivot_*_intersect_dataset_*.txt

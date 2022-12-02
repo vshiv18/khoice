@@ -34,7 +34,7 @@ out_pivot_exp4 = config["OUT_PIVOT"]
 
 # k-mer lengths used in experiments
 k_values = [str(x) for x in range(7, 31, 1)] + [str(x) for x in range(34, 50, 3)]
-#k_values = [str(x) for x in range(7, 31, 6)] --> Used for testing
+#k_values = [str(x) for x in range(7, 31, 4)] # --> Used for testing
 
 t_values = [1] + [str(x) for x in range(5, 35, 5)]
 
