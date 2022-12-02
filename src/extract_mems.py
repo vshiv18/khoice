@@ -10,7 +10,7 @@
 import argparse
 import os
 
-def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
+def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file, read_num):
     """ Given a pattern and lengths array (matching statistics), print out half mems in FASTQ file """
     for i in range(len(curr_seq)):
         curr_half_mem_length = lengths_array[i]
@@ -26,11 +26,11 @@ def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_fil
             random_quality = "#" * write_mem_length
             curr_half_mem = curr_seq[i:i+write_mem_length]
 
-            out_file.write(f">halfmem_{curr_seq_id}_length_{curr_half_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
+            out_file.write(f">read_{read_num}_halfmem_{curr_seq_id}_length_{curr_half_mem_length}\n{curr_half_mem}\n+\n{random_quality}\n")
             curr_seq_id += 1
     return curr_seq_id
 
-def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
+def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file, read_num):
     """ Given a pattern and lengths array (matching statistics), print out MEMs in FASTQ file """
 
     # Print out MEM at position 0 (if it is above threshold)
@@ -44,7 +44,7 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
 
         random_quality = "#" * write_mem_length
         curr_mem = curr_seq[0:write_mem_length]
-        out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
+        out_file.write(f">read_{read_num}_mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
         curr_seq_id += 1
 
     # Scan MS for peaks which correspond to MEMs
@@ -64,7 +64,7 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file):
                     
                 random_quality = "#" * write_mem_length
                 curr_mem = curr_seq[i:i+write_mem_length]
-                out_file.write(f">mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
+                out_file.write(f">read_{read_num}_mem_{curr_seq_id}_length_{curr_mem_length}\n{curr_mem}\n+\n{random_quality}\n")
                 curr_seq_id += 1
     return curr_seq_id
 
@@ -102,9 +102,9 @@ def main(args):
             assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
 
             if args.half_mems: # deal with half-MEMs
-                curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
+                curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
             else: # deal with MEMs
-                curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
+                curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
             seq_id += 1
             curr_seq = ""
         elif not header_line:
@@ -116,9 +116,9 @@ def main(args):
         assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
 
         if args.half_mems: # deal with half-MEMs
-            curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
+            curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
         else: # deal with MEMs
-            curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd)
+            curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
     
     # Close input/output
     pattern_fd.close()

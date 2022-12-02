@@ -12,6 +12,8 @@ import argparse
 import math
 import csv
 import pysam
+import numpy as np
+import random
 
 def calculate_accuracy_values(confusion_matrix, num_datasets):
     """ Calculates accuracy score given confusion matrix """
@@ -36,7 +38,7 @@ def main(args):
     confusion_matrix = [[0 for i in range(args.num_datasets)] for j in range(args.num_datasets)]
 
     # Calculate noise from FASTA index file
-    if args.mems:
+    if args.mems or args.half_mems:
         with open(args.fasta_index_file, "r") as fai_fd:
             all_lengths = [int(x.strip().split()[1]) for x in fai_fd.readlines()]
             total_length = sum(all_lengths)
@@ -55,7 +57,7 @@ def main(args):
             curr_sam = pysam.AlignmentFile(args.sam_dir+"pivot_{pivot}_align_dataset_{dataset}.sam".format(pivot = i + 1, dataset = j + 1), "r")
 
             for read in curr_sam.fetch():
-                query_length = int(read.query_name.split("_")[3])
+                query_length = int(read.query_name.split("_")[5])
 
                 # Only uses reads above threshold
                 if query_length >= args.t:
@@ -79,25 +81,70 @@ def main(args):
                         read_mappings[read.query_name].append(j)
             curr_sam.close()
         print("[log] For pivot {pivot_num}, we received a total weight of {num:.3f}".format(pivot_num=i, num=input_entries))
+
+        # Determine the strategy we will use to build confusion matrix
+        if args.read_dir is not None:
+            print("[log] the confusion matrix will be generated at the read-level.")
+        else:
+            print("[log] the confusion matrix will be generated at the feature-level.") 
         
         # Populate confusion matrix and count entries
         total_entries = 0
-        for key in read_mappings:
-            mem_len = read_mappings[key][0] # Noise is already included here
-            curr_set = set(read_mappings[key][1:])
-            
-            # Keep track of weight spread so far
-            if args.mems:
-                total_entries += mem_len
-            elif args.half_mems:
-                total_entries += 1
-            
-            # Spread the weight across the approriate columns in matrix
-            for dataset in curr_set:
+        if args.read_dir is None: # Feature-level
+            for key in read_mappings:
+                mem_len = read_mappings[key][0] # Noise is already included here
+                curr_set = set(read_mappings[key][1:])
+                
+                # Keep track of weight spread so far
                 if args.mems:
-                    confusion_matrix[i][dataset] += 1/len(curr_set) * mem_len
+                    total_entries += mem_len
                 elif args.half_mems:
-                    confusion_matrix[i][dataset] += 1/len(curr_set)
+                    total_entries += 1
+                
+                # Spread the weight across the approriate columns in matrix
+                for dataset in curr_set:
+                    if args.mems:
+                        confusion_matrix[i][dataset] += 1/len(curr_set) * mem_len
+                    elif args.half_mems:
+                        confusion_matrix[i][dataset] += 1/len(curr_set)
+        else: # Read-level
+            file_path = f"{args.read_dir[0]}pivot_{(i+1)}.fastq"
+            nextFeatureinSameRead = lambda pos, curr_num, lines: (int(lines[pos].split("_")[1]) == curr_num)
+
+            with open(file_path, "r") as in_fd:
+                all_lines = in_fd.readlines()
+                pos = 0; curr_read_num = 0
+
+                # Go through all the features
+                while pos < len(all_lines):
+                    weights = [0 for i in range(args.num_datasets)]
+
+                    # Read all features in one read
+                    while pos < len(all_lines) and nextFeatureinSameRead(pos, curr_read_num, all_lines):
+                        feature = all_lines[pos+1].strip()
+                        length = len(feature)
+                        weight = length - noise
+
+                        # Verify features is in dictionary (might not be due to special cases
+                        # like when spanning across sequences)
+                        if all_lines[pos].strip()[1:] in read_mappings:
+                            matches = set(read_mappings[all_lines[pos].strip()[1:]][1:])
+                            for match in matches:
+                                weights[match] += 1/len(matches) * weight
+
+                        # Increment the position past current read ...
+                        pos += 4
+                    
+                    # Update read num
+                    curr_read_num += 1
+
+                    # Determine which class is the prediction and update confusion matrix...
+                    weights_np = np.array(weights)
+                    max_indexes = np.where(weights_np == max(weights))[0]
+                    class_decision = random.choice(max_indexes)
+
+                    confusion_matrix[i][class_decision] += 1
+                    total_entries += 1
 
         print("[log] For pivot {pivot_num}, we placed a weight of {num:.3f} across the row\n".format(pivot_num=i, num=total_entries))
      
@@ -130,6 +177,7 @@ def parse_arguments():
     parser.add_argument("--mems", action="store_true", default=False, dest="mems", help="sam corresponds to mems (it can either be mems or half-mems, not both)")
     parser.add_argument("-t", "--threshold", dest = "t", required=False, default=0, help="optional threshold value for experiment 8", type = int)
     parser.add_argument("-l", "--length-text", dest = "fasta_index_file", required=False, default="", help="path to .fai file with total reference length")
+    parser.add_argument("-r", "--read-dir", dest="read_dir", nargs=1, help="directory with read files for each pivot")
     args = parser.parse_args()
     return args
 
@@ -147,9 +195,9 @@ def check_arguments(args):
     if args.mems and args.fasta_index_file == "":
         print("Error: length of text must be specified when using MEMs")
         exit(1)
-
-    #if args.cap < 1:
-    #    print("Error: number of entries to cap must be greater than 0")
+    if args.read_dir is not None and not os.path.isdir(args.read_dir[0]):
+        print("Error: the provided directory for read files is not valid")
+        exit(1)
 
 if __name__ == "__main__":
     args = parse_arguments()
