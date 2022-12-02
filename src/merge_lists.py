@@ -161,16 +161,18 @@ def main(args):
                         votes_with_ucol = [0 for i in range(num_datasets)]
 
                         # Process the reads kmers to determine the read's classification
+                        count = 0
                         for kmer in kmer_list:
                             canon_kmer = get_canonical_kmer(kmer)
-                            if canon_kmer in curr_pivot_dict:
-                                matches = curr_pivot_dict[canon_kmer][1:]
+                            matches = curr_pivot_dict[canon_kmer][1:]
+                            if len(matches) > 0: # Occurs in at least 1 database
                                 for match in matches:
                                     votes[match] += 1/len(matches)
                                     votes_with_ucol[match] += 1/len(matches)
-                            else:
-                                print("Error: kmer was not found in the dictionary")
-                                exit(1)
+                            elif len(matches) == 0: # Doesn't occur, so we smear weight across databases
+                                for i in range(num_datasets):
+                                    votes_with_ucol[i] += 1.0/num_datasets
+                                count += 1
                         
                         # Determine which class is the prediction and update confusion matrix...
                         votes_np = np.array(votes)
