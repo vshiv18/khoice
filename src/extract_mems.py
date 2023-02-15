@@ -6,9 +6,12 @@
 #              extract either the half-mems or mems and output
 #              them to stdout.
 # Date: June 21, 2022
+# Adapted by Vikram Shivakumar for Sigmoni
 
 import argparse
 import os
+from Bio import SeqIO
+import numpy as np
 
 def print_out_half_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file, read_num):
     """ Given a pattern and lengths array (matching statistics), print out half mems in FASTQ file """
@@ -68,61 +71,44 @@ def print_out_mems(curr_seq, lengths_array, curr_seq_id, threshold, out_file, re
                 curr_seq_id += 1
     return curr_seq_id
 
+def parse_ms(fname, names=None):
+    with open(fname,'r') as f:
+        if names:
+            return {n : np.fromstring(x, dtype=int, sep=' ').tolist() for n, (_, x) in zip(open(names, 'r').read().splitlines(), 
+                                                                    SeqIO.FastaIO.FastaTwoLineParser(f))}
+        return {i : np.fromstring(x, dtype=int, sep=' ').tolist() for i, x in SeqIO.FastaIO.FastaTwoLineParser(f)}
+
+def parse_fasta(fname):
+    with open(fname,'r') as f:
+        return {i : x for i, x in SeqIO.FastaIO.FastaTwoLineParser(f)}
+
 def main(args):
     """ Extracts either the half-mems/mems from a set of patterns matched to database """
 
     # Open the reads, the MS lengths, and the output FASTQ
-    pattern_fd = open(args.pattern_file, "r")
-    length_fd = open(args.length_file, "r")
+    # pattern_fd = open(args.pattern_file, "r")
+    # length_fd = open(args.length_file, "r")
+    patterns = parse_fasta(args.pattern_file)
+    lengths = parse_ms(args.length_file)
     out_fd = open(args.output_file, "w")
 
     # Verify the number of sequences in each file is the same
-    pattern_lines = [x.strip() for x in pattern_fd.readlines()]
-    length_lines = length_fd.readlines()
-
-    seq_count = [0, 0]
-    for line in pattern_lines:
-        if ">" in line:
-            seq_count[0] += 1
-    for line in length_lines:
-        if ">" in line:
-            seq_count[1] += 1
-    assert seq_count[0] == seq_count[1], "assertion failed: mismatch in the number of sequences in each file."
+    assert len(patterns) == len(lengths), "assertion failed: mismatch in the number of sequences in each file."
     
-    # Start to extract the requested output (half-mems or mems) and output to stdout
-    seq_id = 0
     curr_id = 0
-    curr_seq = ""
-    for line in pattern_lines:
-        header_line = ('>' in line)
-        if header_line and len(curr_seq) > 0:
-            ## IMPORTANT: this is based on the assumption that SPUMONI outputs the lengths all on one line
-            ##            so we know the full file will have (2 times the number of sequences) lines
-            lengths_array = [int(x) for x in length_lines[(seq_id*2)+1].split()]
-            assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
-
-            if args.half_mems: # deal with half-MEMs
-                curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
-            else: # deal with MEMs
-                curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
-            seq_id += 1
-            curr_seq = ""
-        elif not header_line:
-            curr_seq += line.strip()
-
-    # Handle the last sequence not accounted for by for loop
-    if len(curr_seq) > 0:
-        lengths_array = [int(x) for x in length_lines[(seq_id*2)+1].split()]
+    seq_id = 0
+    for r in patterns.keys():
+        lengths_array = lengths[r]
+        curr_seq = patterns[r]
         assert len(lengths_array) == len(curr_seq), "assertion failed: mis-match in terms of the lengths of lengths array"
-
         if args.half_mems: # deal with half-MEMs
             curr_id = print_out_half_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
         else: # deal with MEMs
             curr_id = print_out_mems(curr_seq, lengths_array, curr_id, args.threshold, out_fd, seq_id)
-    
+        seq_id += 1
+    # Start to extract the requested output (half-mems or mems) and output to stdout
+
     # Close input/output
-    pattern_fd.close()
-    length_fd.close()
     out_fd.close()
 
 def parse_arguments():
@@ -149,9 +135,9 @@ def check_args(args):
         exit(1)
     
     # Verify the files are the right type
-    if not args.length_file.endswith(".lengths"):
-        print("Error: the lengths file has the incorrect file extension.")
-        exit(1)
+    #if not args.length_file.endswith(".lengths"):
+    #    print("Error: the lengths file has the incorrect file extension.")
+    #    exit(1)
     if not args.pattern_file.endswith(".fa") and not args.pattern_file.endswith(".fna"):
         print("Error: the pattern file has the incorrect file extension.")
         exit(1)
